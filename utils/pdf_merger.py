@@ -1,6 +1,16 @@
 import io
 from typing import Dict
 
+try:
+    from pypdf import PdfReader, PdfWriter  # type: ignore
+    PDF_LIB_AVAILABLE = True
+except Exception:
+    try:
+        from PyPDF2 import PdfReader, PdfWriter  # type: ignore
+        PDF_LIB_AVAILABLE = True
+    except Exception:
+        PDF_LIB_AVAILABLE = False
+
 class PDFMerger:
     """Handles PDF merging operations"""
     
@@ -14,12 +24,27 @@ class PDFMerger:
         Returns:
             Merged PDF as bytes
         """
-        # This is a placeholder implementation
-        # In a real application, you would use libraries like PyPDF2 or pypdf
-        
-        # Simulate merged PDF creation
-        merged_content = "Combined PDF content:\n"
-        for filename, content in pdf_files.items():
-            merged_content += f"- {filename}\n"
-        
-        return merged_content.encode()
+        # Prefer deterministic order by filename
+        ordered_items = sorted(pdf_files.items(), key=lambda x: x[0])
+
+        if not PDF_LIB_AVAILABLE:
+            # Fallback: concatenate bytes with simple separator; not a valid merged PDF but avoids hard failure
+            output = io.BytesIO()
+            for name, content in ordered_items:
+                output.write(content)
+                output.write(b"\n%---NEXT_FILE---%\n")
+            return output.getvalue()
+
+        writer = PdfWriter()
+        for name, content in ordered_items:
+            try:
+                reader = PdfReader(io.BytesIO(content))
+                for page in reader.pages:
+                    writer.add_page(page)
+            except Exception:
+                # Skip invalid PDFs quietly
+                continue
+
+        output_stream = io.BytesIO()
+        writer.write(output_stream)
+        return output_stream.getvalue()
