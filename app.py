@@ -542,7 +542,7 @@ def main():
                 )
             
             with col_metrics2:
-                total_data_rows = len(self.work_order_data) if hasattr(self, 'work_order_data') else len(data.get('work_order_data', []))
+                total_data_rows = len(data.get('work_order_data', []))
                 st.metric(
                     label="📊 Data Rows Processed", 
                     value=total_data_rows,
