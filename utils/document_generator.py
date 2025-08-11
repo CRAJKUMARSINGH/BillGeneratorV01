@@ -88,8 +88,9 @@ class DocumentGenerator:
         <head>
             <title>First Page Summary</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ size: A4; margin: 0; }}
                 body {{ font-family: Arial, sans-serif; margin: 0; }}
+                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -100,6 +101,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="page">
             <div class="header">
                 <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">First Page Summary</div>
@@ -168,6 +170,7 @@ class DocumentGenerator:
                     </tr>
                 </tbody>
             </table>
+            </div>
         </body>
         </html>
         """
@@ -184,8 +187,9 @@ class DocumentGenerator:
         <head>
             <title>Deviation Statement</title>
             <style>
-                @page {{ size: A4 landscape; margin: 10mm; }}
+                @page {{ size: A4 landscape; margin: 0; }}
                 body {{ font-family: Arial, sans-serif; margin: 0; }}
+                .page {{ width: 297mm; min-height: 210mm; padding: 10mm; box-sizing: border-box; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -196,6 +200,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="page">
             <div class="header">
                 <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Deviation Statement</div>
@@ -267,6 +272,7 @@ class DocumentGenerator:
         html_content += """
                 </tbody>
             </table>
+            </div>
         </body>
         </html>
         """
@@ -283,8 +289,9 @@ class DocumentGenerator:
         <head>
             <title>Final Bill Scrutiny Sheet</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ size: A4; margin: 0; }}
                 body {{ font-family: Arial, sans-serif; margin: 0; }}
+                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -295,6 +302,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="page">
             <div class="header">
                 <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Final Bill Scrutiny Sheet</div>
@@ -341,6 +349,7 @@ class DocumentGenerator:
                     </tr>
                 </tbody>
             </table>
+            </div>
         </body>
         </html>
         """
@@ -357,8 +366,9 @@ class DocumentGenerator:
         <head>
             <title>Extra Items Statement</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ size: A4; margin: 0; }}
                 body {{ font-family: Arial, sans-serif; margin: 0; }}
+                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -369,6 +379,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="page">
             <div class="header">
                 <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Extra Items Statement</div>
@@ -421,6 +432,7 @@ class DocumentGenerator:
             html_content += "<p>No extra items found in the provided data.</p>"
         
         html_content += """
+            </div>
         </body>
         </html>
         """
@@ -437,8 +449,9 @@ class DocumentGenerator:
         <head>
             <title>Certificate II</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ size: A4; margin: 0; }}
                 body {{ font-family: Arial, sans-serif; margin: 0; }}
+                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -447,6 +460,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="page">
             <div class="header">
                 <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Certificate II</div>
@@ -471,6 +485,7 @@ class DocumentGenerator:
                 <p>Engineer-in-Charge</p>
                 <p>Date: {current_date}</p>
             </div>
+            </div>
         </body>
         </html>
         """
@@ -487,8 +502,9 @@ class DocumentGenerator:
         <head>
             <title>Certificate III</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ size: A4; margin: 0; }}
                 body {{ font-family: Arial, sans-serif; margin: 0; }}
+                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -497,6 +513,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="page">
             <div class="header">
                 <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Certificate III</div>
@@ -520,6 +537,7 @@ class DocumentGenerator:
                 <p>_________________________</p>
                 <p>Accounts Officer</p>
                 <p>Date: {current_date}</p>
+            </div>
             </div>
         </body>
         </html>
