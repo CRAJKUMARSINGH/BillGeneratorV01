@@ -24,8 +24,8 @@ class PDFMerger:
         Returns:
             Merged PDF as bytes
         """
-        # Prefer deterministic order by filename
-        ordered_items = sorted(pdf_files.items(), key=lambda x: x[0])
+        # Preserve insertion order coming from generator
+        ordered_items = list(pdf_files.items())
 
         if not PDF_LIB_AVAILABLE:
             # Fallback: concatenate bytes with simple separator; not a valid merged PDF but avoids hard failure
