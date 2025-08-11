@@ -1,6 +1,17 @@
 <html>
 <head>
     <title>Deviation Statement</title>
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 9pt; margin: 0; }
+        h1 { text-align: center; margin: 0 0 8px 0; font-size: 14pt; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5pt; }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; }
+        th, td { border: 1px solid #000; padding: 3px; text-align: left; vertical-align: top; word-wrap: break-word; }
+        th { background: #f0f0f0; text-align: center; }
+    </style>
 </head>
 <body>
     <h1>DEVIATION STATEMENT</h1>
@@ -31,7 +42,7 @@
         <p>Actual Date of Completion: {{ data.actual_completion }}</p>
     {% endif %}
 
-    <table border="1">
+    <table>
         <tr>
             <th>Item No.</th>
             <th>Item of Work</th>
