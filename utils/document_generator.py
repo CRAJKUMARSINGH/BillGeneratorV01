@@ -58,14 +58,23 @@ class DocumentGenerator:
         Returns:
             Dictionary of PDF documents as bytes
         """
-        # This is a placeholder implementation
-        # In a real application, you would use libraries like weasyprint or pdfkit
+        # Try to use WeasyPrint if available to produce real PDFs that honor @page margins
         pdf_files = {}
+        try:
+            from weasyprint import HTML  # type: ignore
+            weasy_available = True
+        except Exception:
+            weasy_available = False
         
         for doc_name, html_content in documents.items():
-            # Simulate PDF generation
-            pdf_content = f"PDF content for {doc_name}".encode()
-            pdf_files[f"{doc_name}.pdf"] = pdf_content
+            if weasy_available:
+                try:
+                    pdf_bytes = HTML(string=html_content, base_url=".").write_pdf()
+                except Exception:
+                    pdf_bytes = f"PDF content for {doc_name}".encode()
+            else:
+                pdf_bytes = f"PDF content for {doc_name}".encode()
+            pdf_files[f"{doc_name}.pdf"] = pdf_bytes
         
         return pdf_files
     
@@ -79,7 +88,8 @@ class DocumentGenerator:
         <head>
             <title>First Page Summary</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 10mm; }}
+                @page {{ size: A4; margin: 10mm; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -107,15 +117,15 @@ class DocumentGenerator:
             <table>
                 <thead>
                     <tr>
-                        <th width="11.1mm">Item No.</th>
-                        <th width="74.2mm">Item of Work supplies</th>
-                        <th width="11.7mm">Unit</th>
+                        <th width="11mm">Item No.</th>
+                        <th width="68mm">Item of Work supplies</th>
+                        <th width="11.5mm">Unit</th>
                         <th width="16mm">Quantity executed since last certificate</th>
                         <th width="16mm">Quantity executed upto date</th>
-                        <th width="15.3mm">Rate</th>
-                        <th width="22.7mm">Amount upto date</th>
-                        <th width="17.6mm">Amount Since previous bill</th>
-                        <th width="13.9mm">Remark</th>
+                        <th width="15mm">Rate</th>
+                        <th width="20.5mm">Amount upto date</th>
+                        <th width="16mm">Amount Since previous bill</th>
+                        <th width="12.5mm">Remark</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -273,7 +283,8 @@ class DocumentGenerator:
         <head>
             <title>Final Bill Scrutiny Sheet</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 10mm; }}
+                @page {{ size: A4; margin: 10mm; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -346,7 +357,8 @@ class DocumentGenerator:
         <head>
             <title>Extra Items Statement</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 10mm; }}
+                @page {{ size: A4; margin: 10mm; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -425,7 +437,8 @@ class DocumentGenerator:
         <head>
             <title>Certificate II</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 10mm; }}
+                @page {{ size: A4; margin: 10mm; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
@@ -474,7 +487,8 @@ class DocumentGenerator:
         <head>
             <title>Certificate III</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 10mm; }}
+                @page {{ size: A4; margin: 10mm; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; }}
                 .header {{ text-align: center; margin-bottom: 20px; }}
                 .title {{ font-size: 18px; font-weight: bold; }}
                 .subtitle {{ font-size: 14px; margin: 5px 0; }}
