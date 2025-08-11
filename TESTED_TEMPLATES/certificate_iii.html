@@ -8,6 +8,7 @@
             size: A4;
             margin: 10mm;
         }
+        * { box-sizing: border-box; }
         body {
             font-family: Arial, sans-serif;
             font-size: 9pt;
@@ -32,12 +33,16 @@
             border-collapse: collapse;
             margin-bottom: 20px;
             font-size: 9pt;
+            table-layout: fixed;
         }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; }
         th, td {
             border: 1px solid black;
             padding: 4px;
             text-align: left;
             vertical-align: top;
+            word-wrap: break-word;
         }
         th {
             font-weight: bold;
