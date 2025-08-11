@@ -649,6 +649,17 @@ def main():
                     use_container_width=True,
                     help=f"Downloads: {filename}"
                 )
+
+                # Direct combined PDF download
+                combined_pdf_name = f"{clean_project_name}_All_Documents_{timestamp}.pdf"
+                st.download_button(
+                    label="📑 Download Combined PDF",
+                    data=merged_pdf,
+                    file_name=combined_pdf_name,
+                    mime="application/pdf",
+                    use_container_width=True,
+                    help=f"Downloads: {combined_pdf_name}"
+                )
                 
                 # Additional download info
                 st.success(f"✅ Package ready: **{filename}** ({file_size_mb} MB)")
