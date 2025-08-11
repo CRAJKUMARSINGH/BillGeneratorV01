@@ -542,7 +542,7 @@ def main():
                 )
             
             with col_metrics2:
-                total_data_rows = len(self.work_order_data) if hasattr(self, 'work_order_data') else len(data.get('work_order_data', []))
+                total_data_rows = len(data.get('work_order_data', []))
                 st.metric(
                     label="📊 Data Rows Processed", 
                     value=total_data_rows,
@@ -648,6 +648,17 @@ def main():
                     mime="application/zip",
                     use_container_width=True,
                     help=f"Downloads: {filename}"
+                )
+
+                # Direct combined PDF download
+                combined_pdf_name = f"{clean_project_name}_All_Documents_{timestamp}.pdf"
+                st.download_button(
+                    label="📑 Download Combined PDF",
+                    data=merged_pdf,
+                    file_name=combined_pdf_name,
+                    mime="application/pdf",
+                    use_container_width=True,
+                    help=f"Downloads: {combined_pdf_name}"
                 )
                 
                 # Additional download info

@@ -58,22 +58,48 @@ class DocumentGenerator:
         Returns:
             Dictionary of PDF documents as bytes
         """
-        # Try to use WeasyPrint if available to produce real PDFs that honor @page margins
         pdf_files = {}
+
+        # Prefer WeasyPrint if available (best CSS print support)
         try:
             from weasyprint import HTML  # type: ignore
-            weasy_available = True
+            def render_with_weasy(html_str: str) -> bytes:
+                return HTML(string=html_str, base_url=".").write_pdf()
         except Exception:
-            weasy_available = False
-        
+            HTML = None  # type: ignore
+            render_with_weasy = None  # type: ignore
+
+        # Fallback to xhtml2pdf (pure-Python, works without system libs)
+        try:
+            from xhtml2pdf import pisa  # type: ignore
+            import io as _io
+            def render_with_xhtml2pdf(html_str: str) -> bytes:
+                output = _io.BytesIO()
+                # Ensure UTF-8 bytes
+                pisa.CreatePDF(src=html_str, dest=output, encoding="utf-8")
+                return output.getvalue()
+        except Exception:
+            render_with_xhtml2pdf = None  # type: ignore
+
         for doc_name, html_content in documents.items():
-            if weasy_available:
-                try:
-                    pdf_bytes = HTML(string=html_content, base_url=".").write_pdf()
-                except Exception:
+            pdf_bytes: bytes
+            try:
+                if render_with_weasy is not None:
+                    pdf_bytes = render_with_weasy(html_content)
+                elif render_with_xhtml2pdf is not None:
+                    pdf_bytes = render_with_xhtml2pdf(html_content)
+                else:
+                    # Last resort fallback to avoid hard failure
                     pdf_bytes = f"PDF content for {doc_name}".encode()
-            else:
-                pdf_bytes = f"PDF content for {doc_name}".encode()
+            except Exception:
+                # Try fallback if WeasyPrint failed at runtime
+                if render_with_xhtml2pdf is not None:
+                    try:
+                        pdf_bytes = render_with_xhtml2pdf(html_content)
+                    except Exception:
+                        pdf_bytes = f"PDF content for {doc_name}".encode()
+                else:
+                    pdf_bytes = f"PDF content for {doc_name}".encode()
             pdf_files[f"{doc_name}.pdf"] = pdf_bytes
         
         return pdf_files
@@ -88,14 +114,17 @@ class DocumentGenerator:
         <head>
             <title>First Page Summary</title>
             <style>
-                @page {{ size: A4; margin: 0; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; }}
-                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
-                .header {{ text-align: center; margin-bottom: 20px; }}
-                .title {{ font-size: 18px; font-weight: bold; }}
-                .subtitle {{ font-size: 14px; margin: 5px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-                th, td {{ border: 1px solid #000; padding: 5px; text-align: left; }}
+                @page {{ size: A4; margin: 10mm; }}
+                * {{ box-sizing: border-box; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 10pt; }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 16pt; font-weight: bold; }}
+                .subtitle {{ font-size: 11pt; margin: 3px 0; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
+                thead {{ display: table-header-group; }}
+                tr, img {{ break-inside: avoid; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -187,14 +216,17 @@ class DocumentGenerator:
         <head>
             <title>Deviation Statement</title>
             <style>
-                @page {{ size: A4 landscape; margin: 0; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; }}
-                .page {{ width: 297mm; min-height: 210mm; padding: 10mm; box-sizing: border-box; }}
-                .header {{ text-align: center; margin-bottom: 20px; }}
-                .title {{ font-size: 18px; font-weight: bold; }}
-                .subtitle {{ font-size: 14px; margin: 5px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; font-size: 10px; }}
+                @page {{ size: A4 landscape; margin: 10mm; }}
+                * {{ box-sizing: border-box; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 9pt; }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 14pt; font-weight: bold; }}
+                .subtitle {{ font-size: 10pt; margin: 3px 0; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 4px 0; table-layout: fixed; }}
+                thead {{ display: table-header-group; }}
+                tr, img {{ break-inside: avoid; }}
+                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word; font-size: 8.5pt; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -289,14 +321,17 @@ class DocumentGenerator:
         <head>
             <title>Final Bill Scrutiny Sheet</title>
             <style>
-                @page {{ size: A4; margin: 0; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; }}
-                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
-                .header {{ text-align: center; margin-bottom: 20px; }}
-                .title {{ font-size: 18px; font-weight: bold; }}
-                .subtitle {{ font-size: 14px; margin: 5px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-                th, td {{ border: 1px solid #000; padding: 5px; text-align: left; }}
+                @page {{ size: A4; margin: 10mm; }}
+                * {{ box-sizing: border-box; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 10pt; }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 16pt; font-weight: bold; }}
+                .subtitle {{ font-size: 11pt; margin: 3px 0; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
+                thead {{ display: table-header-group; }}
+                tr, img {{ break-inside: avoid; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -366,14 +401,17 @@ class DocumentGenerator:
         <head>
             <title>Extra Items Statement</title>
             <style>
-                @page {{ size: A4; margin: 0; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; }}
-                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
-                .header {{ text-align: center; margin-bottom: 20px; }}
-                .title {{ font-size: 18px; font-weight: bold; }}
-                .subtitle {{ font-size: 14px; margin: 5px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-                th, td {{ border: 1px solid #000; padding: 5px; text-align: left; }}
+                @page {{ size: A4; margin: 10mm; }}
+                * {{ box-sizing: border-box; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 10pt; }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 16pt; font-weight: bold; }}
+                .subtitle {{ font-size: 11pt; margin: 3px 0; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
+                thead {{ display: table-header-group; }}
+                tr, img {{ break-inside: avoid; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -449,14 +487,15 @@ class DocumentGenerator:
         <head>
             <title>Certificate II</title>
             <style>
-                @page {{ size: A4; margin: 0; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; }}
-                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
-                .header {{ text-align: center; margin-bottom: 20px; }}
-                .title {{ font-size: 18px; font-weight: bold; }}
-                .subtitle {{ font-size: 14px; margin: 5px 0; }}
-                .content {{ margin: 20px 0; line-height: 1.6; }}
-                .signature {{ margin-top: 50px; }}
+                @page {{ size: A4; margin: 10mm; }}
+                * {{ box-sizing: border-box; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 11pt; }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 16pt; font-weight: bold; }}
+                .subtitle {{ font-size: 11pt; margin: 3px 0; }}
+                .content {{ margin: 10px 0; line-height: 1.5; }}
+                .signature {{ margin-top: 40px; }}
             </style>
         </head>
         <body>
@@ -502,14 +541,15 @@ class DocumentGenerator:
         <head>
             <title>Certificate III</title>
             <style>
-                @page {{ size: A4; margin: 0; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; }}
-                .page {{ width: 210mm; min-height: 297mm; padding: 10mm; box-sizing: border-box; }}
-                .header {{ text-align: center; margin-bottom: 20px; }}
-                .title {{ font-size: 18px; font-weight: bold; }}
-                .subtitle {{ font-size: 14px; margin: 5px 0; }}
-                .content {{ margin: 20px 0; line-height: 1.6; }}
-                .signature {{ margin-top: 50px; }}
+                @page {{ size: A4; margin: 10mm; }}
+                * {{ box-sizing: border-box; }}
+                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 11pt; }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 16pt; font-weight: bold; }}
+                .subtitle {{ font-size: 11pt; margin: 3px 0; }}
+                .content {{ margin: 10px 0; line-height: 1.5; }}
+                .signature {{ margin-top: 40px; }}
             </style>
         </head>
         <body>

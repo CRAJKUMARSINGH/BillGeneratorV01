@@ -8,4 +8,9 @@ dependencies = [
     "pandas>=2.3.1",
     "streamlit>=1.46.1",
     "xlrd>=2.0.2",
+    "weasyprint>=61.2",
+    "xhtml2pdf>=0.2.15",
+    "beautifulsoup4>=4.12.3",
+    "python-docx>=1.1.2",
+    "pypdf>=5.0.0",
 ]

@@ -60,7 +60,7 @@ class ZipPackager:
 
     def _html_to_docx_bytes(self, doc_name: str, html: str) -> bytes:
         """Convert HTML content to a DOCX file in-memory.
-        Attempts a faithful representation: text, simple headings, and tables.
+        Attempts a faithful representation: text, simple headings, lists, and tables.
         Ensures A4 with 10mm margins; landscape for Deviation Statement.
         """
         # If python-docx is not available, return the HTML bytes as a fallback placeholder
@@ -87,6 +87,9 @@ class ZipPackager:
         if BS4_AVAILABLE:
             soup = BeautifulSoup(html, "html.parser")
 
+            def is_within(node, ancestor_name):
+                return node.find_parent(ancestor_name) is not None
+
             # Title/header if present
             header_div = soup.find(class_="header")
             if header_div:
@@ -94,38 +97,71 @@ class ZipPackager:
                     text = node.get_text(strip=True)
                     if not text:
                         continue
-                    if "title" in node.get("class", []):
-                        document.add_heading(text, level=1)
+                    if node.name in ("h1", "h2", "h3", "h4", "h5", "h6") or "title" in node.get("class", []):
+                        level = 1 if node.name == "h1" else 2 if node.name == "h2" else 3
+                        document.add_heading(text, level=level)
                     elif "subtitle" in node.get("class", []):
                         document.add_paragraph(text)
+                    else:
+                        document.add_paragraph(text)
 
-            # Add remaining content: tables and paragraphs
-            # Tables
-            for table in soup.find_all("table"):
-                # Determine number of columns from the first row
-                rows = table.find_all("tr")
-                if not rows:
+            # Tables (preserve order roughly by iterating through DOM)
+            # We'll process elements in body order: handle tables inline, otherwise handle blocks
+            body = soup.body or soup
+            for elem in body.descendants:
+                if not getattr(elem, 'name', None):
                     continue
-                first_cells = rows[0].find_all(["th", "td"]) or []
-                num_cols = max(1, len(first_cells))
-                docx_table = document.add_table(rows=0, cols=num_cols)
-                for tr in rows:
-                    cells = tr.find_all(["th", "td"]) or []
-                    row_cells = docx_table.add_row().cells
-                    for idx in range(num_cols):
-                        cell_text = cells[idx].get_text(strip=False) if idx < len(cells) else ""
-                        # Preserve spacing minimally
-                        row_cells[idx].text = " ".join(cell_text.split())
+                # Skip anything inside header; we already handled header
+                if header_div and (elem is header_div or elem.find_parent(class_="header")):
+                    continue
 
-            # Paragraphs outside tables/header
-            # Capture top-level paragraphs and divs with text
-            for p in soup.find_all(["p", "div"], recursive=True):
-                # Skip header and table content already handled
-                if p.find_parent("table") or p.get("class") == ["header"]:
+                if elem.name == "table":
+                    # Determine number of columns from the first row
+                    rows = elem.find_all("tr")
+                    if not rows:
+                        continue
+                    first_cells = rows[0].find_all(["th", "td"]) or []
+                    num_cols = max(1, len(first_cells))
+                    docx_table = document.add_table(rows=0, cols=num_cols)
+                    for tr in rows:
+                        cells = tr.find_all(["th", "td"]) or []
+                        row_cells = docx_table.add_row().cells
+                        for idx in range(num_cols):
+                            cell_text = cells[idx].get_text(strip=False) if idx < len(cells) else ""
+                            row_cells[idx].text = " ".join(cell_text.split())
                     continue
-                text = p.get_text(strip=True)
-                if text:
-                    document.add_paragraph(text)
+
+                # Headings
+                if elem.name in ("h1", "h2", "h3", "h4", "h5", "h6"):
+                    if is_within(elem, "table"):
+                        continue
+                    text = elem.get_text(strip=True)
+                    if text:
+                        level_map = {"h1":1, "h2":2, "h3":3, "h4":4, "h5":5, "h6":6}
+                        document.add_heading(text, level=level_map.get(elem.name, 2))
+                    continue
+
+                # Lists
+                if elem.name in ("ul", "ol"):
+                    if is_within(elem, "table"):
+                        continue
+                    for li in elem.find_all("li", recursive=False):
+                        text = li.get_text(strip=True)
+                        if text:
+                            style = "List Bullet" if elem.name == "ul" else "List Number"
+                            try:
+                                document.add_paragraph(text, style=style)
+                            except Exception:
+                                document.add_paragraph(text)
+                    continue
+
+                # Paragraph-like blocks
+                if elem.name in ("p", "div"):
+                    if is_within(elem, "table") or is_within(elem, "ul") or is_within(elem, "ol"):
+                        continue
+                    text = elem.get_text(strip=True)
+                    if text:
+                        document.add_paragraph(text)
         else:
             # Best-effort fallback: strip basic HTML tags
             plain = html

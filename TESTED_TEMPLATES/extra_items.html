@@ -4,10 +4,14 @@
     <meta charset="UTF-8">
     <title>Extra Items</title>
     <style>
-        body { font-family: Calibri, sans-serif; font-size: 9pt; margin: 0; }
-        .container { width: 190mm; min-height: 287mm; margin: 10mm auto; padding: 10mm; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid black; padding: 5px; text-align: left; }
+        @page { size: A4; margin: 10mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Calibri, Arial, sans-serif; font-size: 9pt; margin: 0; }
+        .container { width: 100%; margin: 0 auto; padding: 0; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; }
+        th, td { border: 1px solid black; padding: 5px; text-align: left; word-wrap: break-word; }
         .header { text-align: center; }
     </style>
 </head>
