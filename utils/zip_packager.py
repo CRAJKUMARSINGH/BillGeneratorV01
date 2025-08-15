@@ -3,6 +3,8 @@ import io
 from typing import Dict
 from datetime import datetime
 from typing import Optional
+import os
+import re
 
 try:
     from docx import Document  # type: ignore
@@ -21,6 +23,23 @@ except Exception:
 class ZipPackager:
     """Handles packaging of documents into ZIP files"""
     
+    def _sanitize_member_name(self, name: str) -> str:
+        """Return a safe file base name for ZIP entries.
+        - Lowercase and replace spaces with underscores
+        - Remove path separators and collapse suspicious characters
+        - Prevent path traversal and leading dots
+        """
+        base = str(name).strip().lower().replace(" ", "_")
+        # Remove directory separators
+        base = base.replace("/", "_").replace("\\", "_")
+        # Keep only safe characters
+        base = re.sub(r"[^a-z0-9_\-.]", "_", base)
+        # Disallow path traversal patterns and leading dots
+        while ".." in base:
+            base = base.replace("..", ".")
+        base = base.lstrip(".")
+        return base or "document"
+        
     def create_package(self, documents: Dict[str, str], pdf_files: Dict[str, bytes], merged_pdf: bytes) -> io.BytesIO:
         """
         Create a ZIP package containing all documents in multiple formats
@@ -38,12 +57,17 @@ class ZipPackager:
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             # Add HTML documents
             for doc_name, html_content in documents.items():
-                filename = f"html/{doc_name.replace(' ', '_').lower()}.html"
+                base = self._sanitize_member_name(doc_name)
+                filename = f"html/{base}.html"
                 zip_file.writestr(filename, html_content)
             
             # Add individual PDF files
             for pdf_name, pdf_content in pdf_files.items():
-                filename = f"pdf/{pdf_name}"
+                # Use only the base name and sanitize
+                basename = os.path.basename(str(pdf_name))
+                base_no_ext = os.path.splitext(basename)[0]
+                safe_base = self._sanitize_member_name(base_no_ext)
+                filename = f"pdf/{safe_base}.pdf"
                 zip_file.writestr(filename, pdf_content)
             
             # Add merged PDF
@@ -51,7 +75,8 @@ class ZipPackager:
             
             # Add Word documents generated from the same HTML
             for doc_name, html_content in documents.items():
-                filename = f"word/{doc_name.replace(' ', '_').lower()}.docx"
+                base = self._sanitize_member_name(doc_name)
+                filename = f"word/{base}.docx"
                 docx_bytes = self._html_to_docx_bytes(doc_name, html_content)
                 zip_file.writestr(filename, docx_bytes)
         
