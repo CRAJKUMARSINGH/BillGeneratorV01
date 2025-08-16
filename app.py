@@ -468,6 +468,17 @@ def main():
         """, unsafe_allow_html=True)
 
     if uploaded_file is not None:
+        # Enforce upload size limit (10 MB) to prevent performance / DoS issues
+        try:
+            size_bytes = getattr(uploaded_file, 'size', None)
+            if size_bytes is None:
+                size_bytes = len(uploaded_file.getbuffer())
+            size_mb = size_bytes / (1024 * 1024)
+            if size_mb > 10:
+                st.error(f"File is too large ({size_mb:.2f} MB). Please upload a file under 10 MB.")
+                return
+        except Exception:
+            pass
         try:
             # Show processing status with enhanced styling
             st.markdown("""

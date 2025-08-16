@@ -60,42 +60,40 @@ class DocumentGenerator:
         """
         pdf_files = {}
 
-        # Prefer WeasyPrint if available (best CSS print support)
-        try:
-            from weasyprint import HTML  # type: ignore
-            def render_with_weasy(html_str: str) -> bytes:
-                return HTML(string=html_str, base_url=".").write_pdf()
-        except Exception:
-            HTML = None  # type: ignore
-            render_with_weasy = None  # type: ignore
-
-        # Fallback to xhtml2pdf (pure-Python, works without system libs)
+        # Prefer xhtml2pdf first (pure-Python, avoids system library issues), then fall back to WeasyPrint
+        render_with_xhtml2pdf = None  # type: ignore
+        render_with_weasy = None  # type: ignore
         try:
             from xhtml2pdf import pisa  # type: ignore
             import io as _io
             def render_with_xhtml2pdf(html_str: str) -> bytes:
                 output = _io.BytesIO()
-                # Ensure UTF-8 bytes
                 pisa.CreatePDF(src=html_str, dest=output, encoding="utf-8")
                 return output.getvalue()
         except Exception:
-            render_with_xhtml2pdf = None  # type: ignore
+            pass
+        try:
+            from weasyprint import HTML  # type: ignore
+            def render_with_weasy(html_str: str) -> bytes:
+                return HTML(string=html_str, base_url=".").write_pdf()
+        except Exception:
+            pass
 
         for doc_name, html_content in documents.items():
             pdf_bytes: bytes
             try:
-                if render_with_weasy is not None:
-                    pdf_bytes = render_with_weasy(html_content)
-                elif render_with_xhtml2pdf is not None:
+                if render_with_xhtml2pdf is not None:
                     pdf_bytes = render_with_xhtml2pdf(html_content)
+                elif render_with_weasy is not None:
+                    pdf_bytes = render_with_weasy(html_content)
                 else:
                     # Last resort fallback to avoid hard failure
                     pdf_bytes = f"PDF content for {doc_name}".encode()
             except Exception:
-                # Try fallback if WeasyPrint failed at runtime
-                if render_with_xhtml2pdf is not None:
+                # Try the alternate engine if available
+                if render_with_weasy is not None:
                     try:
-                        pdf_bytes = render_with_xhtml2pdf(html_content)
+                        pdf_bytes = render_with_weasy(html_content)
                     except Exception:
                         pdf_bytes = f"PDF content for {doc_name}".encode()
                 else:
@@ -444,7 +442,9 @@ class DocumentGenerator:
             
             total_amount = 0
             for index, row in self.extra_items_data.iterrows():
-                amount = row.get('Quantity', 0) * row.get('Rate', 0)
+                quantity = self._safe_float(row.get('Quantity', 0))
+                rate = self._safe_float(row.get('Rate', 0))
+                amount = quantity * rate
                 total_amount += amount
                 
                 html_content += f"""
@@ -452,9 +452,9 @@ class DocumentGenerator:
                             <td>{row.get('Item No', '')}</td>
                             <td>{row.get('Description', '')}</td>
                             <td>{row.get('Unit', '')}</td>
-                            <td class="amount">{row.get('Quantity', 0):.0f}</td>
-                            <td class="amount">{row.get('Rate', 0):.0f}</td>
-                            <td class="amount">{amount:.0f}</td>
+                            <td class="amount">{quantity:.2f}</td>
+                            <td class="amount">{rate:.2f}</td>
+                            <td class="amount">{amount:.2f}</td>
                         </tr>
                 """
             
