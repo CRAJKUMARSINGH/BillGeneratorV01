@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Entry - Infrastructure Billing System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            color: white;
+            margin: 0 15px;
+        }
+        
+        .step-number {
+            background: rgba(255,255,255,0.3);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .step.completed .step-number {
+            background: #28a745;
+        }
+        
+        .step.active .step-number {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .project-info {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .bill-form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .form-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .items-table th,
+        .items-table td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        
+        .items-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .items-table .main-spec {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .items-table .sub-item {
+            background: white;
+        }
+        
+        .qty-input {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: right;
+            font-size: 0.9rem;
+        }
+        
+        .qty-input:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .amount-display {
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .locked-field {
+            background: #f8f9fa;
+            color: #666;
+            border: 1px solid #e9ecef;
+        }
+        
+        .total-section {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: right;
+        }
+        
+        .total-amount {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .form-actions {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+        
+        .btn-save {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-save:hover {
+            background: #ffb300;
+            transform: scale(1.05);
+        }
+        
+        .btn-generate {
+            background: #28a745;
+            color: white;
+            font-size: 1.1rem;
+            padding: 15px 40px;
+        }
+        
+        .btn-generate:hover {
+            background: #218838;
+            transform: scale(1.05);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .items-table {
+                font-size: 0.8rem;
+            }
+            
+            .items-table th,
+            .items-table td {
+                padding: 8px 4px;
+            }
+            
+            .qty-input {
+                width: 60px;
+            }
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="back-btn" onclick="history.back()">← Back to Upload</button>
+        
+        <div class="header">
+            <h1>📋 Fill Bill Quantities</h1>
+            <p>Enter actual quantities executed for each work item</p>
+        </div>
+        
+        <div class="step-indicator">
+            <div class="step completed">
+                <div class="step-number">✓</div>
+                <span>Upload Work Order</span>
+            </div>
+            <div class="step active">
+                <div class="step-number">2</div>
+                <span>Fill Quantities</span>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <span>Generate Documents</span>
+            </div>
+        </div>
+        
+        <div class="project-info">
+            <h3>📄 Project Information</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <div><strong>Project Name:</strong> {{ title_data.get('Project Name', 'N/A') }}</div>
+                <div><strong>Contract No:</strong> {{ title_data.get('Contract No', 'N/A') }}</div>
+                <div><strong>Work Order No:</strong> {{ title_data.get('Work Order No', 'N/A') }}</div>
+            </div>
+        </div>
+        
+        <div class="bill-form-card">
+            <h2 class="form-title">🔢 Enter Bill Quantities</h2>
+            
+            <form id="bill-entry-form" action="/process-bill-entry" method="POST">
+                <div class="table-container">
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Item No.</th>
+                                <th style="width: 300px;">Description</th>
+                                <th style="width: 60px;">Unit</th>
+                                <th style="width: 80px;">WO Qty</th>
+                                <th style="width: 80px;">Rate</th>
+                                <th style="width: 80px;">WO Amount</th>
+                                <th style="width: 100px;">Bill Qty</th>
+                                <th style="width: 100px;">Bill Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-tbody">
+                            {% for item in work_order_items %}
+                            <tr class="{% if 'MAIN SPECIFICATION' in item.get('Description', '') or item.get('Quantity Since', 0) == 0 %}main-spec{% else %}sub-item{% endif %}">
+                                <td>{{ item.get('Item No.', '') }}</td>
+                                <td>{{ item.get('Description', '') }}</td>
+                                <td>{{ item.get('Unit', '') }}</td>
+                                <td style="text-align: right;">
+                                    {% if item.get('Quantity Since', 0) > 0 %}
+                                        {{ "%.2f"|format(item.get('Quantity Since', 0)) }}
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    {% if item.get('Rate', 0) > 0 %}
+                                        {{ "%.2f"|format(item.get('Rate', 0)) }}
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    {% if item.get('Amount Since', 0) > 0 %}
+                                        {{ "%.2f"|format(item.get('Amount Since', 0)) }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if 'MAIN SPECIFICATION' in item.get('Description', '') or item.get('Quantity Since', 0) == 0 %}
+                                        <input type="hidden" name="qty_{{ loop.index0 }}" value="0">
+                                        <input type="text" class="qty-input locked-field" value="" readonly>
+                                    {% else %}
+                                        <input type="number" 
+                                               name="qty_{{ loop.index0 }}" 
+                                               class="qty-input" 
+                                               step="0.01" 
+                                               min="0" 
+                                               data-rate="{{ item.get('Rate', 0) }}"
+                                               data-index="{{ loop.index0 }}"
+                                               onchange="calculateAmount(this)"
+                                               placeholder="0.00">
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    <span id="amount_{{ loop.index0 }}" class="amount-display">0.00</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="total-section">
+                    <div class="total-amount">
+                        Total Bill Amount: ₹ <span id="total-amount">0.00</span>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-save" onclick="saveDraft()">
+                        💾 Save Draft
+                    </button>
+                    <button type="submit" class="btn btn-generate">
+                        📄 Generate Documents
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <p style="color: white; opacity: 0.8; font-size: 0.9rem;">
+                Enhanced document formatting powered by Warp AI Terminal
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        function calculateAmount(input) {
+            const index = input.dataset.index;
+            const rate = parseFloat(input.dataset.rate) || 0;
+            const quantity = parseFloat(input.value) || 0;
+            const amount = quantity * rate;
+            
+            const amountSpan = document.getElementById(`amount_${index}`);
+            amountSpan.textContent = amount.toFixed(2);
+            
+            calculateTotal();
+        }
+        
+        function calculateTotal() {
+            let total = 0;
+            const amountSpans = document.querySelectorAll('.amount-display');
+            
+            amountSpans.forEach(span => {
+                total += parseFloat(span.textContent) || 0;
+            });
+            
+            document.getElementById('total-amount').textContent = total.toFixed(2);
+        }
+        
+        function saveDraft() {
+            // In future, implement draft saving to session/database
+            alert('Draft saved successfully! ✅\\n\\nYou can continue filling quantities or come back later.');
+        }
+        
+        // Initialize calculations on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('.qty-input:not(.locked-field)');
+            inputs.forEach(input => {
+                calculateAmount(input);
+            });
+        });
+        
+        // Form submission
+        document.getElementById('bill-entry-form').addEventListener('submit', function(e) {
+            const generateBtn = document.querySelector('.btn-generate');
+            generateBtn.textContent = '🔄 Processing...';
+            generateBtn.style.opacity = '0.7';
+        });
+        
+        // Auto-calculate on input
+        document.querySelectorAll('.qty-input:not(.locked-field)').forEach(input => {
+            input.addEventListener('input', function() {
+                calculateAmount(this);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -13,7 +13,7 @@ from utils.excel_processor import ExcelProcessor
 from utils.document_generator import DocumentGenerator
 from utils.pdf_merger import PDFMerger
 from utils.zip_packager import ZipPackager
-# from utils.performance_optimizer import PerformanceOptimizer  # Not used
+from utils.performance_optimizer import PerformanceOptimizer
 
 # Page configuration
 st.set_page_config(
