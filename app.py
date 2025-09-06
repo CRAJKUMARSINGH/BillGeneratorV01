@@ -657,6 +657,14 @@ def main():
 
             processor = ExcelProcessor(uploaded_file)
             data = processor.process_excel()
+            
+            # Debug: Check if data was extracted
+            st.write("🔍 Debug Info:")
+            st.write(f"Title data items: {len(data.get('title_data', {}))}")
+            st.write(f"Work Order rows: {len(data.get('work_order_data', []))}")
+            st.write(f"Bill Quantity rows: {len(data.get('bill_quantity_data', []))}")
+            st.write(f"Extra Items rows: {len(data.get('extra_items_data', []))}")
+            
             progress_bar.progress(30)
 
             status_text.markdown("**Step 2/5:** 📝 Generating professional documents...")
@@ -664,6 +672,15 @@ def main():
             # Generate documents
             generator = DocumentGenerator(data)
             documents = generator.generate_all_documents()
+            
+            # Debug: Check if documents were generated
+            st.write("📝 Document Generation Debug:")
+            for doc_name, doc_content in documents.items():
+                content_length = len(doc_content) if doc_content else 0
+                st.write(f"  {doc_name}: {content_length} characters")
+                if content_length == 0:
+                    st.error(f"⚠️ {doc_name} is empty!")
+            
             progress_bar.progress(60)
 
             status_text.markdown("**Step 3/5:** 📄 Converting to PDF format...")

@@ -11,6 +11,67 @@ class ExcelProcessor:
         self.uploaded_file = uploaded_file
         self.workbook = None
     
+    def _safe_read_excel(self):
+        """
+        Safely read Excel file with comprehensive error handling for common access issues
+        """
+        import time
+        import os
+        
+        max_retries = 3
+        retry_delay = 1  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                # Read Excel file - handle both file paths and file-like objects
+                if hasattr(self.uploaded_file, 'read'):
+                    # It's a file-like object (like Streamlit uploaded file)
+                    excel_data = pd.ExcelFile(self.uploaded_file)
+                else:
+                    # It's a file path - check if file exists and is accessible
+                    if not os.path.exists(self.uploaded_file):
+                        raise FileNotFoundError(f"File not found: {self.uploaded_file}")
+                    
+                    # Check file permissions
+                    if not os.access(self.uploaded_file, os.R_OK):
+                        raise PermissionError(f"No read permission for file: {self.uploaded_file}")
+                    
+                    excel_data = pd.ExcelFile(self.uploaded_file)
+                
+                return excel_data
+                
+            except PermissionError as e:
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                raise Exception(f"File access denied. Please close the Excel file if it's open in another program. Error: {str(e)}")
+            
+            except FileNotFoundError as e:
+                raise Exception(f"File not found. Please check the file path. Error: {str(e)}")
+            
+            except pd.errors.EmptyDataError:
+                raise Exception("The Excel file appears to be empty or corrupted. Please check the file and try again.")
+            
+            except pd.errors.ExcelFileError as e:
+                if "Permission denied" in str(e) or "access" in str(e).lower():
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    raise Exception(f"File access issue. Please close the Excel file if it's open in another program. Error: {str(e)}")
+                else:
+                    raise Exception(f"Excel file format error. Please ensure the file is a valid Excel file (.xlsx or .xls). Error: {str(e)}")
+            
+            except Exception as e:
+                if "permission" in str(e).lower() or "access" in str(e).lower() or "locked" in str(e).lower():
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    raise Exception(f"File access issue. Please close the Excel file if it's open in another program. Error: {str(e)}")
+                else:
+                    raise Exception(f"Error reading Excel file: {str(e)}")
+        
+        raise Exception("Failed to read Excel file after multiple attempts. Please check file permissions and ensure it's not open in another program.")
+    
     def process_excel(self) -> Dict[str, Any]:
         """
         Process uploaded Excel file and extract data from all required sheets
@@ -19,60 +80,92 @@ class ExcelProcessor:
             Dict containing extracted data from all sheets
         """
         try:
-            # Read Excel file - handle both file paths and file-like objects
-            if hasattr(self.uploaded_file, 'read'):
-                # It's a file-like object (like Streamlit uploaded file)
-                excel_data = pd.ExcelFile(self.uploaded_file)
-            else:
-                # It's a file path
-                excel_data = pd.ExcelFile(self.uploaded_file)
+            # Enhanced file access with better error handling
+            excel_data = self._safe_read_excel()
+            
+            # Debug: Print available sheet names
+            print(f"Available sheets: {excel_data.sheet_names}")
             
             # Initialize data dictionary
             data = {}
             
             # Process Title sheet
             if 'Title' in excel_data.sheet_names:
+                print("Processing Title sheet...")
                 data['title_data'] = self._process_title_sheet(excel_data)
+                print(f"Title data extracted: {len(data['title_data'])} items")
+            else:
+                print("WARNING: Title sheet not found")
+                data['title_data'] = {}
             
             # Process Work Order sheet
             if 'Work Order' in excel_data.sheet_names:
+                print("Processing Work Order sheet...")
                 data['work_order_data'] = self._process_work_order_sheet(excel_data)
+                print(f"Work Order data extracted: {len(data['work_order_data'])} rows")
+            else:
+                print("ERROR: Work Order sheet not found - this is required!")
+                raise Exception("Required 'Work Order' sheet not found in Excel file")
             
             # Process Bill Quantity sheet
             if 'Bill Quantity' in excel_data.sheet_names:
+                print("Processing Bill Quantity sheet...")
                 data['bill_quantity_data'] = self._process_bill_quantity_sheet(excel_data)
+                print(f"Bill Quantity data extracted: {len(data['bill_quantity_data'])} rows")
+            else:
+                print("ERROR: Bill Quantity sheet not found - this is required!")
+                raise Exception("Required 'Bill Quantity' sheet not found in Excel file")
             
             # Process Extra Items sheet (optional)
             if 'Extra Items' in excel_data.sheet_names:
+                print("Processing Extra Items sheet...")
                 data['extra_items_data'] = self._process_extra_items_sheet(excel_data)
+                print(f"Extra Items data extracted: {len(data['extra_items_data'])} rows")
             else:
+                print("INFO: Extra Items sheet not found - this is optional")
                 data['extra_items_data'] = pd.DataFrame()
             
-            return data
+            # Validate that we have essential data
+            if not data.get('work_order_data', pd.DataFrame()).empty and not data.get('bill_quantity_data', pd.DataFrame()).empty:
+                print("SUCCESS: All required data extracted successfully")
+                return data
+            else:
+                raise Exception("No valid data found in required sheets. Please check your Excel file format.")
             
         except Exception as e:
+            print(f"ERROR in process_excel: {str(e)}")
             raise Exception(f"Error processing Excel file: {str(e)}")
     
     def _process_title_sheet(self, excel_data) -> Dict[str, str]:
         """Extract metadata from Title sheet"""
         try:
             title_df = pd.read_excel(excel_data, sheet_name='Title', header=None)
+            print(f"Title sheet shape: {title_df.shape}")
+            print(f"Title sheet columns: {list(title_df.columns)}")
             
             # Convert to dictionary - assuming key-value pairs in adjacent columns
             title_data = {}
             for index, row in title_df.iterrows():
                 if pd.notna(row[0]) and pd.notna(row[1]):
-                    title_data[str(row[0]).strip()] = str(row[1]).strip()
+                    key = str(row[0]).strip()
+                    val = str(row[1]).strip()
+                    if key and val and key != 'nan' and val != 'nan':
+                        title_data[key] = val
             
+            print(f"Title data extracted: {title_data}")
             return title_data
             
         except Exception as e:
+            print(f"Error in _process_title_sheet: {str(e)}")
             raise Exception(f"Error processing Title sheet: {str(e)}")
     
     def _process_work_order_sheet(self, excel_data) -> pd.DataFrame:
         """Extract work order data"""
         try:
             work_order_df = pd.read_excel(excel_data, sheet_name='Work Order', header=0)
+            print(f"Work Order sheet shape: {work_order_df.shape}")
+            print(f"Work Order columns: {list(work_order_df.columns)}")
+            print(f"First few rows:\n{work_order_df.head()}")
             
             # Standardize column names to match expected format
             column_mapping = {
@@ -88,6 +181,7 @@ class ExcelProcessor:
             for old_col, new_col in column_mapping.items():
                 if old_col in work_order_df.columns:
                     work_order_df = work_order_df.rename(columns={old_col: new_col})
+                    print(f"Renamed column: {old_col} -> {new_col}")
             
             # Add missing columns with default values
             if 'Quantity Upto' not in work_order_df.columns:
@@ -104,14 +198,21 @@ class ExcelProcessor:
                     qty_column = col
                     break
             
+            print(f"Using quantity column: {qty_column}")
+            
             if qty_column:
                 # Filter out rows with zero or blank quantities
+                before_count = len(work_order_df)
                 work_order_df = work_order_df.dropna(subset=[qty_column])
                 work_order_df = work_order_df[work_order_df[qty_column] != 0]
+                after_count = len(work_order_df)
+                print(f"Filtered rows: {before_count} -> {after_count}")
             
+            print(f"Final Work Order data shape: {work_order_df.shape}")
             return work_order_df
             
         except Exception as e:
+            print(f"Error in _process_work_order_sheet: {str(e)}")
             raise Exception(f"Error processing Work Order sheet: {str(e)}")
     
     def _process_bill_quantity_sheet(self, excel_data) -> pd.DataFrame:
