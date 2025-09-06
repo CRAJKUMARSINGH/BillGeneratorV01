@@ -24,6 +24,12 @@ class DocumentGenerator:
         except (ValueError, TypeError):
             return 0.0
     
+    def _safe_serial_no(self, value):
+        """Safely convert serial number, return empty string if NaN or None"""
+        if pd.isna(value) or value is None or str(value).lower() == 'nan':
+            return ''
+        return str(value).strip()
+    
     def _find_column(self, df, possible_names):
         """Find column by trying multiple possible names"""
         for name in possible_names:
@@ -52,7 +58,7 @@ class DocumentGenerator:
     
     def create_pdf_documents(self, documents: Dict[str, str]) -> Dict[str, bytes]:
         """
-        Convert HTML documents to PDF format
+        Convert HTML documents to PDF format with improved margin handling
         
         Args:
             documents: Dictionary of HTML documents
@@ -62,44 +68,62 @@ class DocumentGenerator:
         """
         pdf_files = {}
 
-        # Prefer xhtml2pdf first (pure-Python, avoids system library issues), then fall back to WeasyPrint
-        render_with_xhtml2pdf = None  # type: ignore
+        # Prefer WeasyPrint for better CSS @page support, then fall back to xhtml2pdf
         render_with_weasy = None  # type: ignore
+        render_with_xhtml2pdf = None  # type: ignore
+        
+        try:
+            from weasyprint import HTML, CSS  # type: ignore
+            def render_with_weasy(html_str: str) -> bytes:
+                # WeasyPrint handles @page margins properly
+                return HTML(string=html_str, base_url=".").write_pdf()
+        except Exception:
+            pass
+            
         try:
             from xhtml2pdf import pisa  # type: ignore
             import io as _io
             def render_with_xhtml2pdf(html_str: str) -> bytes:
+                # xhtml2pdf may not handle @page margins well, so we use reportlab options
                 output = _io.BytesIO()
-                pisa.CreatePDF(src=html_str, dest=output, encoding="utf-8")
+                # Set page margins in points (10mm = ~28.35 points)
+                result = pisa.CreatePDF(
+                    src=html_str, 
+                    dest=output, 
+                    encoding="utf-8",
+                    default_css=None,
+                    link_callback=None,
+                    context_meta={'page_size': 'A4', 
+                                 'margin_top': '28.35pt',
+                                 'margin_right': '28.35pt', 
+                                 'margin_bottom': '28.35pt',
+                                 'margin_left': '28.35pt'}
+                )
                 return output.getvalue()
-        except Exception:
-            pass
-        try:
-            from weasyprint import HTML  # type: ignore
-            def render_with_weasy(html_str: str) -> bytes:
-                return HTML(string=html_str, base_url=".").write_pdf()
         except Exception:
             pass
 
         for doc_name, html_content in documents.items():
             pdf_bytes: bytes
             try:
-                if render_with_xhtml2pdf is not None:
-                    pdf_bytes = render_with_xhtml2pdf(html_content)
-                elif render_with_weasy is not None:
-                    pdf_bytes = render_with_weasy(html_content)
-                else:
-                    # Last resort fallback to avoid hard failure
-                    pdf_bytes = f"PDF content for {doc_name}".encode()
-            except Exception:
-                # Try the alternate engine if available
+                # Prefer WeasyPrint for better CSS support
                 if render_with_weasy is not None:
-                    try:
-                        pdf_bytes = render_with_weasy(html_content)
-                    except Exception:
-                        pdf_bytes = f"PDF content for {doc_name}".encode()
+                    pdf_bytes = render_with_weasy(html_content)
+                elif render_with_xhtml2pdf is not None:
+                    pdf_bytes = render_with_xhtml2pdf(html_content)
                 else:
-                    pdf_bytes = f"PDF content for {doc_name}".encode()
+                    # Last resort fallback
+                    pdf_bytes = f"PDF content for {doc_name} - No PDF library available".encode()
+            except Exception as e:
+                # Try the alternate engine if available
+                try:
+                    if render_with_xhtml2pdf is not None:
+                        pdf_bytes = render_with_xhtml2pdf(html_content)
+                    else:
+                        pdf_bytes = f"PDF generation failed for {doc_name}: {str(e)}".encode()
+                except Exception:
+                    pdf_bytes = f"PDF generation failed for {doc_name}: {str(e)}".encode()
+                    
             pdf_files[f"{doc_name}.pdf"] = pdf_bytes
         
         # Memory cleanup
@@ -116,9 +140,25 @@ class DocumentGenerator:
         <head>
             <title>First Page Summary</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ 
+                    size: A4; 
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
+                }}
                 * {{ box-sizing: border-box; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 10pt; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 10mm;
+                    font-size: 10pt; 
+                }}
+                .page {{ 
+                    margin: 0;
+                    padding: 0;
+                }}
                 .page {{ }}
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
@@ -137,6 +177,7 @@ class DocumentGenerator:
                 <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">First Page Summary</div>
                 <div class="subtitle">Date: {current_date}</div>
+                <div style="font-size: 8pt; color: #666; margin-top: 5px; font-style: italic;">Enhanced document formatting powered by Warp AI Terminal</div>
             </div>
             
             <h3>Project Information</h3>
@@ -150,15 +191,15 @@ class DocumentGenerator:
             <table>
                 <thead>
                     <tr>
-                        <th width="11mm">Item No.</th>
-                        <th width="68mm">Item of Work supplies</th>
-                        <th width="11.5mm">Unit</th>
-                        <th width="16mm">Quantity executed since last certificate</th>
-                        <th width="16mm">Quantity executed upto date</th>
-                        <th width="15mm">Rate</th>
-                        <th width="20.5mm">Amount upto date</th>
-                        <th width="16mm">Amount Since previous bill</th>
-                        <th width="12.5mm">Remark</th>
+                        <th width="11.7mm">Unit</th>
+                        <th width="16mm">Quantity executed (or supplied) since last certificate</th>
+                        <th width="16mm">Quantity executed (or supplied) upto date as per MB</th>
+                        <th width="11.1mm">Item No.</th>
+                        <th width="74.2mm">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+                        <th width="15.3mm">Rate</th>
+                        <th width="22.7mm">Amount upto date</th>
+                        <th width="17.6mm">Amount Since previous bill (Total for each sub-head)</th>
+                        <th width="13.9mm">Remark</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,16 +214,23 @@ class DocumentGenerator:
             amount_since = self._safe_float(row.get('Amount Since', quantity_since * rate))
             amount_upto = self._safe_float(row.get('Amount Upto', amount_since))
             
+            # Format values conditionally
+            qty_since_display = f"{quantity_since:.2f}" if quantity_since > 0 else ""
+            qty_upto_display = f"{quantity_upto:.2f}" if quantity_upto > 0 else ""
+            rate_display = f"{rate:.2f}" if rate > 0 else ""
+            amt_upto_display = f"{amount_upto:.2f}" if amount_upto > 0 else ""
+            amt_since_display = f"{amount_since:.2f}" if amount_since > 0 else ""
+            
             html_content += f"""
                     <tr>
-                        <td>{row.get('Item No.', row.get('Item', ''))}</td>
-                        <td>{row.get('Description', '')}</td>
                         <td>{row.get('Unit', '')}</td>
-                        <td class="amount">{quantity_since:.2f}</td>
-                        <td class="amount">{quantity_upto:.2f}</td>
-                        <td class="amount">{rate:.2f}</td>
-                        <td class="amount">{amount_upto:.2f}</td>
-                        <td class="amount">{amount_since:.2f}</td>
+                        <td class="amount">{qty_since_display}</td>
+                        <td class="amount">{qty_upto_display}</td>
+                        <td>{self._safe_serial_no(row.get('Item No.', row.get('Item', '')))}</td>
+                        <td>{row.get('Description', '')}</td>
+                        <td class="amount">{rate_display}</td>
+                        <td class="amount">{amt_upto_display}</td>
+                        <td class="amount">{amt_since_display}</td>
                         <td>{row.get('Remark', '')}</td>
                     </tr>
             """
@@ -220,9 +268,21 @@ class DocumentGenerator:
         <head>
             <title>Deviation Statement</title>
             <style>
-                @page {{ size: A4 landscape; margin: 10mm; }}
+                @page {{ 
+                    size: A4 landscape; 
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
+                }}
                 * {{ box-sizing: border-box; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 9pt; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 10mm;
+                    font-size: 9pt; 
+                }}
                 .page {{ }}
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 14pt; font-weight: bold; }}
@@ -289,20 +349,31 @@ class DocumentGenerator:
             saving_qty = max(0, wo_qty - bq_qty)
             saving_amt = saving_qty * wo_rate
             
+            # Format deviation values conditionally
+            wo_qty_display = f"{wo_qty:.2f}" if wo_qty > 0 else ""
+            wo_rate_display = f"{wo_rate:.2f}" if wo_rate > 0 else ""
+            wo_amount_display = f"{wo_amount:.2f}" if wo_amount > 0 else ""
+            bq_qty_display = f"{bq_qty:.2f}" if bq_qty > 0 else ""
+            bq_amount_display = f"{bq_amount:.2f}" if bq_amount > 0 else ""
+            excess_qty_display = f"{excess_qty:.2f}" if excess_qty > 0 else ""
+            excess_amt_display = f"{excess_amt:.2f}" if excess_amt > 0 else ""
+            saving_qty_display = f"{saving_qty:.2f}" if saving_qty > 0 else ""
+            saving_amt_display = f"{saving_amt:.2f}" if saving_amt > 0 else ""
+            
             html_content += f"""
                     <tr>
-                        <td>{wo_row.get('Item No.', wo_row.get('Item', ''))}</td>
+                        <td>{self._safe_serial_no(wo_row.get('Item No.', wo_row.get('Item', '')))}</td>
                         <td>{wo_row.get('Description', '')}</td>
                         <td>{wo_row.get('Unit', '')}</td>
-                        <td class="amount">{wo_qty:.2f}</td>
-                        <td class="amount">{wo_rate:.2f}</td>
-                        <td class="amount">{wo_amount:.2f}</td>
-                        <td class="amount">{bq_qty:.2f}</td>
-                        <td class="amount">{bq_amount:.2f}</td>
-                        <td class="amount">{excess_qty:.2f}</td>
-                        <td class="amount">{excess_amt:.2f}</td>
-                        <td class="amount">{saving_qty:.2f}</td>
-                        <td class="amount">{saving_amt:.2f}</td>
+                        <td class="amount">{wo_qty_display}</td>
+                        <td class="amount">{wo_rate_display}</td>
+                        <td class="amount">{wo_amount_display}</td>
+                        <td class="amount">{bq_qty_display}</td>
+                        <td class="amount">{bq_amount_display}</td>
+                        <td class="amount">{excess_qty_display}</td>
+                        <td class="amount">{excess_amt_display}</td>
+                        <td class="amount">{saving_qty_display}</td>
+                        <td class="amount">{saving_amt_display}</td>
                         <td></td>
                     </tr>
             """
@@ -327,9 +398,21 @@ class DocumentGenerator:
         <head>
             <title>Final Bill Scrutiny Sheet</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ 
+                    size: A4; 
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
+                }}
                 * {{ box-sizing: border-box; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 10pt; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 10mm;
+                    font-size: 10pt; 
+                }}
                 .page {{ }}
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
@@ -374,7 +457,7 @@ class DocumentGenerator:
             
             html_content += f"""
                     <tr>
-                        <td>{row.get('Item No.', row.get('Item', ''))}</td>
+                        <td>{self._safe_serial_no(row.get('Item No.', row.get('Item', '')))}</td>
                         <td>{row.get('Description', '')}</td>
                         <td>{row.get('Unit', '')}</td>
                         <td class="amount">{quantity:.2f}</td>
@@ -407,9 +490,21 @@ class DocumentGenerator:
         <head>
             <title>Extra Items Statement</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ 
+                    size: A4; 
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
+                }}
                 * {{ box-sizing: border-box; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 10pt; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 10mm;
+                    font-size: 10pt; 
+                }}
                 .page {{ }}
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
@@ -457,7 +552,7 @@ class DocumentGenerator:
                 
                 html_content += f"""
                         <tr>
-                            <td>{row.get('Item No.', row.get('Item No', row.get('Item', '')))}</td>
+                            <td>{self._safe_serial_no(row.get('Item No.', row.get('Item No', row.get('Item', ''))))}</td>
                             <td>{row.get('Description', '')}</td>
                             <td>{row.get('Unit', '')}</td>
                             <td class="amount">{quantity:.2f}</td>
@@ -495,9 +590,21 @@ class DocumentGenerator:
         <head>
             <title>Certificate II</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ 
+                    size: A4; 
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
+                }}
                 * {{ box-sizing: border-box; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 11pt; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 10mm;
+                    font-size: 11pt; 
+                }}
                 .page {{ }}
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
@@ -549,9 +656,21 @@ class DocumentGenerator:
         <head>
             <title>Certificate III</title>
             <style>
-                @page {{ size: A4; margin: 10mm; }}
+                @page {{ 
+                    size: A4; 
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
+                }}
                 * {{ box-sizing: border-box; }}
-                body {{ font-family: Arial, sans-serif; margin: 0; font-size: 11pt; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 10mm;
+                    font-size: 11pt; 
+                }}
                 .page {{ }}
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}

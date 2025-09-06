@@ -35,7 +35,7 @@
             <tbody>
                 {% for item in data.extra_items %}
                     <tr>
-                        <td>{{ item.serial_no }}</td>
+                        <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
                         <td>{{ item.remark }}</td>
                         <td>{{ item.description }}</td>
                         <td>{{ item.quantity | round(0) | int if item.quantity else "" }}</td>

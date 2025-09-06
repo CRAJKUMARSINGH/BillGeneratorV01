@@ -44,23 +44,23 @@
 
     <table>
         <tr>
-            <th>Item No.</th>
-            <th>Item of Work</th>
-            <th>Unit</th>
-            <th>Qty as per Work Order</th>
-            <th>Rate</th>
-            <th>Amount as per Work Order</th>
-            <th>Qty as Executed</th>
-            <th>Amount as Executed</th>
-            <th>Excess Qty</th>
-            <th>Excess Amount</th>
-            <th>Saving Qty</th>
-            <th>Saving Amount</th>
-            <th>Remark</th>
+            <th width="6mm">Item No.</th>
+            <th width="95mm">Item of Work</th>
+            <th width="10mm">Unit</th>
+            <th width="10mm">Qty as per Work Order</th>
+            <th width="12mm">Rate</th>
+            <th width="12mm">Amount as per Work Order</th>
+            <th width="12mm">Qty as Executed</th>
+            <th width="12mm">Amount as Executed</th>
+            <th width="12mm">Excess Qty</th>
+            <th width="12mm">Excess Amount</th>
+            <th width="12mm">Saving Qty</th>
+            <th width="12mm">Saving Amount</th>
+            <th width="40mm">Remark</th>
         </tr>
         {% for item in data.deviation_items %}
         <tr>
-            <td>{{ item.serial_no }}</td>
+            <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
             <td>{{ item.description }}</td>
             <td>{{ item.unit }}</td>
             <td>{{ "%.2f" | format(item.qty_wo) if item.qty_wo else "" }}</td>

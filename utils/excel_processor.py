@@ -201,12 +201,25 @@ class ExcelProcessor:
             print(f"Using quantity column: {qty_column}")
             
             if qty_column:
-                # Filter out rows with zero or blank quantities
+                # Preserve main specification items even with zero quantity
+                # Only remove rows that are completely empty or have no description
                 before_count = len(work_order_df)
-                work_order_df = work_order_df.dropna(subset=[qty_column])
-                work_order_df = work_order_df[work_order_df[qty_column] != 0]
+                
+                # Keep rows if they have:
+                # 1. Non-zero quantity, OR
+                # 2. A meaningful description (likely main specification), OR
+                # 3. An item number (specification header)
+                mask = (
+                    (pd.notna(work_order_df[qty_column]) & (work_order_df[qty_column] != 0)) |  # Has quantity
+                    (pd.notna(work_order_df.get('Description', pd.Series())) & 
+                     work_order_df.get('Description', pd.Series()).astype(str).str.strip().str.len() > 0) |  # Has description
+                    (pd.notna(work_order_df.get('Item No.', pd.Series())) & 
+                     work_order_df.get('Item No.', pd.Series()).astype(str).str.strip().str.len() > 0)  # Has item number
+                )
+                
+                work_order_df = work_order_df[mask]
                 after_count = len(work_order_df)
-                print(f"Filtered rows: {before_count} -> {after_count}")
+                print(f"Smart filtered rows: {before_count} -> {after_count} (preserved main specifications)")
             
             print(f"Final Work Order data shape: {work_order_df.shape}")
             return work_order_df
@@ -243,9 +256,21 @@ class ExcelProcessor:
                     break
             
             if qty_column:
-                # Filter out rows with zero or blank quantities
-                bill_qty_df = bill_qty_df.dropna(subset=[qty_column])
-                bill_qty_df = bill_qty_df[bill_qty_df[qty_column] != 0]
+                # Preserve main specification items even with zero quantity
+                # Keep rows if they have:
+                # 1. Non-zero quantity, OR
+                # 2. A meaningful description (likely main specification), OR
+                # 3. An item number (specification header)
+                mask = (
+                    (pd.notna(bill_qty_df[qty_column]) & (bill_qty_df[qty_column] != 0)) |  # Has quantity
+                    (pd.notna(bill_qty_df.get('Description', pd.Series())) & 
+                     bill_qty_df.get('Description', pd.Series()).astype(str).str.strip().str.len() > 0) |  # Has description
+                    (pd.notna(bill_qty_df.get('Item No.', pd.Series())) & 
+                     bill_qty_df.get('Item No.', pd.Series()).astype(str).str.strip().str.len() > 0)  # Has item number
+                )
+                
+                bill_qty_df = bill_qty_df[mask]
+                print(f"Smart filtered bill quantity rows (preserved main specifications)")
             
             return bill_qty_df
             
@@ -305,9 +330,21 @@ class ExcelProcessor:
                     break
             
             if qty_column:
-                # Filter out rows with zero or blank quantities
-                extra_items_df = extra_items_df.dropna(subset=[qty_column])
-                extra_items_df = extra_items_df[extra_items_df[qty_column] != 0]
+                # Preserve main specification items even with zero quantity
+                # Keep rows if they have:
+                # 1. Non-zero quantity, OR
+                # 2. A meaningful description (likely main specification), OR
+                # 3. An item number (specification header)
+                mask = (
+                    (pd.notna(extra_items_df[qty_column]) & (extra_items_df[qty_column] != 0)) |  # Has quantity
+                    (pd.notna(extra_items_df.get('Description', pd.Series())) & 
+                     extra_items_df.get('Description', pd.Series()).astype(str).str.strip().str.len() > 0) |  # Has description
+                    (pd.notna(extra_items_df.get('Item No.', pd.Series())) & 
+                     extra_items_df.get('Item No.', pd.Series()).astype(str).str.strip().str.len() > 0)  # Has item number
+                )
+                
+                extra_items_df = extra_items_df[mask]
+                print(f"Smart filtered extra items rows (preserved main specifications)")
             
             return extra_items_df
             
