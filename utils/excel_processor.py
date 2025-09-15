@@ -1,8 +1,6 @@
 import pandas as pd
-import io
-import hashlib
 from typing import Dict, Any
-from functools import lru_cache
+
 
 class ExcelProcessor:
     """Handles Excel file processing and data extraction"""
@@ -270,7 +268,7 @@ class ExcelProcessor:
                 )
                 
                 bill_qty_df = bill_qty_df[mask]
-                print(f"Smart filtered bill quantity rows (preserved main specifications)")
+                print("Smart filtered bill quantity rows (preserved main specifications)")
             
             return bill_qty_df
             
@@ -289,7 +287,7 @@ class ExcelProcessor:
                 # Check if we have meaningful column names
                 if all('Unnamed' in str(col) for col in extra_items_df.columns):
                     extra_items_df = None
-            except:
+            except Exception:
                 pass
             
             # If that didn't work, try with header=1 or 2
@@ -300,7 +298,7 @@ class ExcelProcessor:
                         # Check if we have meaningful column names
                         if not all('Unnamed' in str(col) for col in extra_items_df.columns):
                             break
-                    except:
+                    except Exception:
                         continue
             
             # If still no good data, return empty DataFrame
@@ -344,10 +342,10 @@ class ExcelProcessor:
                 )
                 
                 extra_items_df = extra_items_df[mask]
-                print(f"Smart filtered extra items rows (preserved main specifications)")
+                print("Smart filtered extra items rows (preserved main specifications)")
             
             return extra_items_df
             
-        except Exception as e:
+        except Exception:
             # Return empty DataFrame instead of raising exception for optional sheet
             return pd.DataFrame()

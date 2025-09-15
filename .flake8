@@ -1,0 +1,22 @@
+[flake8]
+max-line-length = 120
+extend-ignore =
+    E501,
+    W291,
+    W293,
+    E128,
+    E231
+exclude =
+    .venv,
+    build,
+    dist,
+    node_modules
+per-file-ignores =
+    utils/zip_packager.py:E231
+    app.py:F401,F841,E302,E305
+    app_flask.py:F401,E302,E305
+    test_optimized_version.py:F401,F841,E302,E305
+    asset_manager.py:F401,E302,E305
+    utils/performance_optimizer.py:E302,E305
+    utils/excel_processor_memory_optimized.py:F401,F841,E302
+    utils/excel_processor_optimized.py:F401,E302
