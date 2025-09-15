@@ -11,6 +11,7 @@ except Exception:
     except Exception:
         PDF_LIB_AVAILABLE = False
 
+
 class PDFMerger:
     """Handles PDF merging operations"""
     

@@ -2,8 +2,7 @@ import pandas as pd
 import gc
 from datetime import datetime
 from typing import Dict, Any
-import io
-from functools import lru_cache
+ 
 
 class DocumentGenerator:
     """Generates various billing documents from processed Excel data"""
@@ -69,37 +68,40 @@ class DocumentGenerator:
         pdf_files = {}
 
         # Prefer WeasyPrint for better CSS @page support, then fall back to xhtml2pdf
-        render_with_weasy = None  # type: ignore
-        render_with_xhtml2pdf = None  # type: ignore
+        weasy_renderer = None  # type: ignore
+        xhtml2pdf_renderer = None  # type: ignore
         
         try:
-            from weasyprint import HTML, CSS  # type: ignore
-            def render_with_weasy(html_str: str) -> bytes:
-                # WeasyPrint handles @page margins properly
+            from weasyprint import HTML  # type: ignore
+
+            def _render_with_weasy(html_str: str) -> bytes:
                 return HTML(string=html_str, base_url=".").write_pdf()
+
+            weasy_renderer = _render_with_weasy
         except Exception:
             pass
             
         try:
             from xhtml2pdf import pisa  # type: ignore
             import io as _io
-            def render_with_xhtml2pdf(html_str: str) -> bytes:
-                # xhtml2pdf may not handle @page margins well, so we use reportlab options
+
+            def _render_with_xhtml2pdf(html_str: str) -> bytes:
                 output = _io.BytesIO()
-                # Set page margins in points (10mm = ~28.35 points)
-                result = pisa.CreatePDF(
-                    src=html_str, 
-                    dest=output, 
+                pisa.CreatePDF(
+                    src=html_str,
+                    dest=output,
                     encoding="utf-8",
                     default_css=None,
                     link_callback=None,
-                    context_meta={'page_size': 'A4', 
-                                 'margin_top': '28.35pt',
-                                 'margin_right': '28.35pt', 
-                                 'margin_bottom': '28.35pt',
-                                 'margin_left': '28.35pt'}
+                    context_meta={'page_size': 'A4',
+                                  'margin_top': '28.35pt',
+                                  'margin_right': '28.35pt',
+                                  'margin_bottom': '28.35pt',
+                                  'margin_left': '28.35pt'}
                 )
                 return output.getvalue()
+
+            xhtml2pdf_renderer = _render_with_xhtml2pdf
         except Exception:
             pass
 
@@ -107,18 +109,18 @@ class DocumentGenerator:
             pdf_bytes: bytes
             try:
                 # Prefer WeasyPrint for better CSS support
-                if render_with_weasy is not None:
-                    pdf_bytes = render_with_weasy(html_content)
-                elif render_with_xhtml2pdf is not None:
-                    pdf_bytes = render_with_xhtml2pdf(html_content)
+                if weasy_renderer is not None:
+                    pdf_bytes = weasy_renderer(html_content)
+                elif xhtml2pdf_renderer is not None:
+                    pdf_bytes = xhtml2pdf_renderer(html_content)
                 else:
                     # Last resort fallback
                     pdf_bytes = f"PDF content for {doc_name} - No PDF library available".encode()
             except Exception as e:
                 # Try the alternate engine if available
                 try:
-                    if render_with_xhtml2pdf is not None:
-                        pdf_bytes = render_with_xhtml2pdf(html_content)
+                    if xhtml2pdf_renderer is not None:
+                        pdf_bytes = xhtml2pdf_renderer(html_content)
                     else:
                         pdf_bytes = f"PDF generation failed for {doc_name}: {str(e)}".encode()
                 except Exception:

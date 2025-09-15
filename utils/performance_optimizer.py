@@ -4,9 +4,10 @@ Performance optimization utilities for BillGeneratorV01
 Provides memory management, caching, and performance monitoring
 """
 import gc
+import pandas as pd
 import psutil
 import hashlib
-from functools import lru_cache, wraps
+from functools import wraps
 from typing import Any, Dict, Optional
 import streamlit as st
 from cachetools import TTLCache
@@ -23,7 +24,7 @@ class PerformanceOptimizer:
         """Get current memory usage in MB"""
         try:
             return self.process.memory_info().rss / 1024 / 1024
-        except:
+        except Exception:
             return 0.0
     
     def cleanup_memory(self):
@@ -228,8 +229,8 @@ class StreamlitOptimizer:
                     'About': "Infrastructure Billing System v2.1 - Optimized Edition"
                 }
             )
-        except:
-            pass  # Already configured
+        except Exception:
+            pass
     
     @staticmethod
     def add_performance_metrics_sidebar():

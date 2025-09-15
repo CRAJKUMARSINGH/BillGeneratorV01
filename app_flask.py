@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, flash, jsonify
+from flask import Flask, render_template, request, send_file, jsonify
 import os
 import tempfile
 import zipfile
@@ -38,8 +38,8 @@ def upload_file():
         return jsonify({'error': 'Invalid file type. Please upload Excel files (.xlsx or .xls)'}), 400
     
     try:
-        # Save uploaded file temporarily
-        filename = secure_filename(file.filename)
+        # Save uploaded file temporarily (sanitized name if ever needed later)
+        secure_filename(file.filename)
         
         # Process the Excel file
         start_time = datetime.now()
@@ -65,7 +65,8 @@ def upload_file():
         end_time = datetime.now()
         processing_time = (end_time - start_time).total_seconds()
         
-        # Clean up memory
+        # Capture counts then clean up memory
+        pdf_files_count = len(pdf_files)
         del documents, pdf_files
         gc.collect()
         
@@ -82,15 +83,17 @@ def upload_file():
         with open(zip_path, 'wb') as f:
             f.write(zip_buffer.getvalue())
         
-        return jsonify({
+        response = {
             'success': True,
             'message': 'Documents generated successfully!',
             'filename': zip_filename,
             'processing_time': round(processing_time, 2),
             'download_url': f'/download/{zip_filename}',
             'file_size': len(zip_buffer.getvalue()),
-            'documents_count': len(documents) if 'documents' in locals() else 0
-        })
+            'documents_count': pdf_files_count
+        }
+
+        return jsonify(response)
         
     except Exception as e:
         error_msg = str(e)

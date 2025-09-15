@@ -1,8 +1,7 @@
 import zipfile
 import io
 from typing import Dict
-from datetime import datetime
-from typing import Optional
+
 
 try:
     from docx import Document  # type: ignore
@@ -17,6 +16,7 @@ try:
     BS4_AVAILABLE = True
 except Exception:
     BS4_AVAILABLE = False
+
 
 class ZipPackager:
     """Handles packaging of documents into ZIP files"""
