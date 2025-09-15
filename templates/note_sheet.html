@@ -28,51 +28,57 @@
     <div class="container">
         <div class="header">
             <h2>FINAL BILL SCRUTINY SHEET</h2>
-            <p>First & Final Bill Agreement No. {{ data.agreement_no }}</p>
+            <p>First & Final Bill Agreement No. {{ title_data.get('Agreement No :', 'N/A') }}</p>
         </div>
         <table class="specific-table">
             <tbody>
                 <tr><td>1</td><td>Chargeable Head</td><td>8443-00-108-00-00</td></tr>
-                <tr><td>2</td><td>Agreement No.</td><td>{{ data.agreement_no }}</td></tr>
+                <tr><td>2</td><td>Agreement No.</td><td>{{ title_data.get('Agreement No :', 'N/A') }}</td></tr>
                 <tr><td>3</td><td>Adm. Section</td><td>Udaipur Electrical Division</td></tr>
                 <tr><td>4</td><td>Tech. Section</td><td>Ambamata Sub-Division</td></tr>
                 <tr><td>5</td><td>M.B No.</td><td>887/Pg. No. 04-20</td></tr>
                 <tr><td>6</td><td>Name of Sub Dn</td><td>Ambamata Sub-Division</td></tr>
-                <tr><td>7</td><td>Name of Work</td><td>{{ data.name_of_work }}</td></tr>
-                <tr><td>8</td><td>Name of Firm</td><td>{{ data.name_of_firm }}</td></tr>
+                <tr><td>7</td><td>Name of Work</td><td>{{ title_data.get('Name of Work ;-', 'N/A') }}</td></tr>
+                <tr><td>8</td><td>Name of Firm</td><td>{{ title_data.get('Name of Contractor or supplier :', 'N/A') }}</td></tr>
                 <tr><td>9</td><td>Original/Deposit</td><td>Deposit</td></tr>
-                <tr><td>11</td><td>Date of Commencement</td><td>{{ data.date_commencement }}</td></tr>
-                <tr><td>12</td><td>Date of Completion</td><td>{{ data.date_completion }}</td></tr>
-                <tr><td>13</td><td>Actual Date of Completion</td><td>{{ data.actual_completion or data.date_completion }}</td></tr>
+                <tr><td>11</td><td>Date of Commencement</td><td>{{ title_data.get('Date of commencement  :', 'N/A') }}</td></tr>
+                <tr><td>12</td><td>Date of Completion</td><td>{{ title_data.get('Schedule Date of completion  :', 'N/A') }}</td></tr>
+                <tr><td>13</td><td>Actual Date of Completion</td><td>{{ title_data.get('Actual date of completion  :', title_data.get('Schedule Date of completion  :', 'N/A')) }}</td></tr>
                 <tr><td>14</td><td>In case of delay weather, Provisional Extension Granted</td><td>Work completed within stipulated time</td></tr>
                 <tr><td>15</td><td>Whether any notice issued</td><td>No</td></tr>
-                <tr><td>16</td><td>Amount of Work Order Rs.</td><td>{{ data.work_order_amount | round(0) | int }}</td></tr>
-                <tr><td>17</td><td>Actual Expenditure up to this Bill Rs.</td><td>{{ data.totals.grand_total | round(0) | int }}</td></tr>
+                <tr><td>16</td><td>Amount of Work Order Rs.</td><td>{{ totals.work_order_amount | round(0) | int if totals.work_order_amount else 'N/A' }}</td></tr>
+                <tr><td>17</td><td>Actual Expenditure up to this Bill Rs.</td><td>{{ totals.grand_total | round(0) | int if totals.grand_total else 'N/A' }}</td></tr>
                 <tr><td>18</td><td>Balance to be done Rs.</td><td>NIL</td></tr>
-                <tr><td></td><td>Net Amount of This Bill Rs.</td><td>{{ data.totals.grand_total | round(0) | int }}</td></tr>
+                <tr><td></td><td>Net Amount of This Bill Rs.</td><td>{{ totals.grand_total | round(0) | int if totals.grand_total else 'N/A' }}</td></tr>
                 <tr><td>19</td><td>Prorata Progress on the Work maintained by the Firm</td><td>Till date 100% Work is executed</td></tr>
-                <tr><td>20</td><td>Date on Which record Measurement taken by JEN AC</td><td>{{ data.measurement_date }}</td></tr>
+                <tr><td>20</td><td>Date on Which record Measurement taken by JEN AC</td><td>{{ title_data.get('Measurement Date', 'N/A') }}</td></tr>
                 <tr><td>21</td><td>Date of Checking and % on the Checked By AEN</td><td>100% checked</td></tr>
                 <tr><td>22</td><td>No. Of selection item checked by the EE</td><td>All items checked</td></tr>
                 <tr><td>23</td><td>Other Inputs</td><td></td></tr>
                 <tr><td></td><td>(A) Is It a Repair / Maintenance Work</td><td>No</td></tr>
-                <tr><td></td><td>(B) Extra Item</td><td>{% if data.extra_items_sum > 0 %}Yes{% else %}No{% endif %}</td></tr>
-                <tr><td></td><td>Amount of Extra Items Rs.</td><td>{{ data.extra_items_sum | round(0) | int if data.extra_items_sum > 0 else '' }}</td></tr>
+                <tr><td></td><td>(B) Extra Item</td><td>{% if totals.extra_items_sum and totals.extra_items_sum > 0 %}Yes{% else %}No{% endif %}</td></tr>
+                <tr><td></td><td>Amount of Extra Items Rs.</td><td>{{ totals.extra_items_sum | round(0) | int if totals.extra_items_sum and totals.extra_items_sum > 0 else '' }}</td></tr>
                 <tr><td></td><td>(C) Any Excess Item Executed?</td><td>No</td></tr>
                 <tr><td></td><td>(D) Any Inadvertent Delay in Bill Submission?</td><td>No</td></tr>
                 <tr><td></td><td>Deductions:-</td><td></td></tr>
-                <tr><td></td><td>S.D.II</td><td>{{ data.totals.sd_amount | round(0) | int }}</td></tr>
-                <tr><td></td><td>I.T.</td><td>{{ data.totals.it_amount | round(0) | int }}</td></tr>
-                <tr><td></td><td>GST</td><td>{{ data.totals.gst_amount | round(0) | int }}</td></tr>
-                <tr><td></td><td>L.C.</td><td>{{ data.totals.lc_amount | round(0) | int }}</td></tr>
+                <tr><td></td><td>S.D.II</td><td>{{ totals.sd_amount | round(0) | int if totals.sd_amount else 0 }}</td></tr>
+                <tr><td></td><td>I.T.</td><td>{{ totals.it_amount | round(0) | int if totals.it_amount else 0 }}</td></tr>
+                <tr><td></td><td>GST</td><td>{{ totals.gst_amount | round(0) | int if totals.gst_amount else 0 }}</td></tr>
+                <tr><td></td><td>L.C.</td><td>{{ totals.lc_amount | round(0) | int if totals.lc_amount else 0 }}</td></tr>
                 <tr><td></td><td>Liquidated Damages (Recovery)</td><td>NIL</td></tr>
-                <tr><td></td><td>Cheque</td><td>{{ data.totals.net_payable | round(0) | int }}</td></tr>
-                <tr><td></td><td>Total</td><td>{{ data.totals.grand_total | round(0) | int }}</td></tr>
+                <tr><td></td><td>Cheque</td><td>{{ totals.net_payable | round(0) | int if totals.net_payable else 0 }}</td></tr>
+                <tr><td></td><td>Total</td><td>{{ totals.grand_total | round(0) | int if totals.grand_total else 0 }}</td></tr>
                 <tr><td colspan="3" class="note-cell">
                     <strong>Notes:</strong>
-                    {% for note in data.notes %}
+                    {% if notes and notes|length > 0 %}
+                        {% for note in notes %}
 {{ loop.index }}. {{ note }}
-                    {% endfor %}
+                        {% endfor %}
+                    {% else %}
+1. Work completed as per schedule
+2. All measurements verified
+3. Quality as per specifications
+                    {% endif %}
                 </td></tr>
             </tbody>
         </table>

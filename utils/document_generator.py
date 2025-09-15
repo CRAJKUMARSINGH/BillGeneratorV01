@@ -4,9 +4,12 @@ from datetime import datetime
 from typing import Dict, Any
 import io
 from functools import lru_cache
+import pandas as pd
+from jinja2 import Environment, FileSystemLoader
+import os
 
 class DocumentGenerator:
-    """Generates various billing documents from processed Excel data"""
+    """Generates various billing documents from processed Excel data using Jinja2 templates"""
     
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -14,6 +17,58 @@ class DocumentGenerator:
         self.work_order_data = data.get('work_order_data', pd.DataFrame())
         self.bill_quantity_data = data.get('bill_quantity_data', pd.DataFrame())
         self.extra_items_data = data.get('extra_items_data', pd.DataFrame())
+        
+        # Set up Jinja2 environment for templates
+        template_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
+        self.jinja_env = Environment(loader=FileSystemLoader(template_dir))
+        
+        # Prepare data for templates
+        self.template_data = self._prepare_template_data()
+    
+    def _number_to_words(self, num):
+        """Convert number to words (simplified version)"""
+        if num == 0:
+            return "Zero"
+        
+        ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+        teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+        tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+        
+        def convert_hundreds(n):
+            result = ''
+            if n >= 100:
+                result += ones[n // 100] + ' Hundred '
+                n %= 100
+            if n >= 20:
+                result += tens[n // 10] + ' '
+                n %= 10
+            elif n >= 10:
+                result += teens[n - 10] + ' '
+                n = 0
+            if n > 0:
+                result += ones[n] + ' '
+            return result.strip()
+        
+        if num < 1000:
+            return convert_hundreds(num)
+        elif num < 100000:
+            thousands = num // 1000
+            remainder = num % 1000
+            result = convert_hundreds(thousands) + ' Thousand '
+            if remainder > 0:
+                result += convert_hundreds(remainder)
+            return result.strip()
+        else:
+            lakhs = num // 100000
+            remainder = num % 100000
+            result = convert_hundreds(lakhs) + ' Lakh '
+            if remainder > 0:
+                if remainder >= 1000:
+                    result += convert_hundreds(remainder // 1000) + ' Thousand '
+                    remainder %= 1000
+                if remainder > 0:
+                    result += convert_hundreds(remainder)
+            return result.strip()
     
     def _safe_float(self, value):
         """Safely convert value to float, return 0 if conversion fails"""
@@ -37,28 +92,150 @@ class DocumentGenerator:
                 return name
         return None
     
+    def _prepare_template_data(self) -> Dict[str, Any]:
+        """Prepare data structure for Jinja2 templates"""
+        # Calculate totals and prepare structured data
+        work_items = []
+        total_amount = 0
+        
+        # Process work order data
+        for index, row in self.work_order_data.iterrows():
+            quantity_since = self._safe_float(row.get('Quantity Since', row.get('Quantity', 0)))
+            rate = self._safe_float(row.get('Rate', 0))
+            amount = quantity_since * rate
+            total_amount += amount
+            
+            work_items.append({
+                'unit': row.get('Unit', ''),
+                'quantity_since': quantity_since,
+                'quantity_upto': self._safe_float(row.get('Quantity Upto', quantity_since)),
+                'item_no': self._safe_serial_no(row.get('Item No.', row.get('Item', ''))),
+                'description': row.get('Description', ''),
+                'rate': rate,
+                'amount_upto': amount,
+                'amount_since': amount,
+                'remark': row.get('Remark', '')
+            })
+        
+        # Process extra items
+        extra_items = []
+        extra_total = 0
+        
+        if not self.extra_items_data.empty:
+            for index, row in self.extra_items_data.iterrows():
+                quantity = self._safe_float(row.get('Quantity', 0))
+                rate = self._safe_float(row.get('Rate', 0))
+                amount = quantity * rate
+                extra_total += amount
+                
+                extra_items.append({
+                    'unit': row.get('Unit', ''),
+                    'quantity': quantity,
+                    'item_no': self._safe_serial_no(row.get('Item No.', row.get('Item', ''))),
+                    'description': row.get('Description', ''),
+                    'rate': rate,
+                    'amount': amount,
+                    'remark': row.get('Remark', '')
+                })
+        
+        # Calculate premiums
+        tender_premium_percent = self._safe_float(self.title_data.get('TENDER PREMIUM %', 0))
+        premium_amount = total_amount * (tender_premium_percent / 100)
+        grand_total = total_amount + premium_amount
+        
+        extra_premium = extra_total * (tender_premium_percent / 100)
+        extra_grand_total = extra_total + extra_premium
+        
+        # Calculate deductions and final amounts
+        sd_amount = grand_total * 0.10  # Security Deposit 10%
+        it_amount = grand_total * 0.02  # Income Tax 2%
+        gst_amount = grand_total * 0.02  # GST 2%
+        lc_amount = grand_total * 0.01  # Labour Cess 1%
+        total_deductions = sd_amount + it_amount + gst_amount + lc_amount
+        net_payable = grand_total - total_deductions
+        
+        # Calculate totals data structure
+        totals = {
+            'grand_total': grand_total,
+            'work_order_amount': total_amount,
+            'tender_premium_percent': tender_premium_percent / 100,
+            'tender_premium_amount': premium_amount,
+            'final_total': grand_total,
+            'extra_items_sum': extra_grand_total,
+            'sd_amount': sd_amount,
+            'it_amount': it_amount,
+            'gst_amount': gst_amount,
+            'lc_amount': lc_amount,
+            'total_deductions': total_deductions,
+            'net_payable': net_payable,
+            'excess_amount': 0,  # Will be calculated from deviation data
+            'excess_premium': 0,
+            'excess_total': 0,
+            'saving_amount': 0,
+            'saving_premium': 0,
+            'saving_total': 0,
+            'net_difference': 0
+        }
+        
+        return {
+            'title_data': self.title_data,
+            'work_items': work_items,
+            'extra_items': extra_items,
+            'totals': totals,
+            'current_date': datetime.now().strftime('%d/%m/%Y'),
+            'total_amount': total_amount,
+            'tender_premium_percent': tender_premium_percent,
+            'premium_amount': premium_amount,
+            'grand_total': grand_total,
+            'extra_total': extra_total,
+            'extra_premium': extra_premium,
+            'extra_grand_total': extra_grand_total,
+            'final_total': grand_total + extra_grand_total,
+            'payable_words': self._number_to_words(int(net_payable)),
+            'notes': ['Work completed as per schedule', 'All measurements verified', 'Quality as per specifications']
+        }
+    
     def generate_all_documents(self) -> Dict[str, str]:
         """
-        Generate all required documents
+        Generate all required documents using Jinja2 templates
         
         Returns:
             Dictionary containing all generated documents in HTML format
         """
         documents = {}
         
-        # Generate individual documents
-        documents['First Page Summary'] = self._generate_first_page()
-        documents['Deviation Statement'] = self._generate_deviation_statement()
-        documents['Final Bill Scrutiny Sheet'] = self._generate_final_bill_scrutiny()
-        documents['Extra Items Statement'] = self._generate_extra_items_statement()
-        documents['Certificate II'] = self._generate_certificate_ii()
-        documents['Certificate III'] = self._generate_certificate_iii()
+        try:
+            # Generate individual documents using templates
+            documents['First Page Summary'] = self._render_template('first_page.html')
+            documents['Deviation Statement'] = self._render_template('deviation_statement.html') 
+            documents['Final Bill Scrutiny Sheet'] = self._render_template('note_sheet.html')
+            documents['Extra Items Statement'] = self._render_template('extra_items.html')
+            documents['Certificate II'] = self._render_template('certificate_ii.html')
+            documents['Certificate III'] = self._render_template('certificate_iii.html')
+        except Exception as e:
+            print(f"Template rendering failed, falling back to programmatic generation: {e}")
+            # Fallback to programmatic generation if templates fail
+            documents['First Page Summary'] = self._generate_first_page()
+            documents['Deviation Statement'] = self._generate_deviation_statement()
+            documents['Final Bill Scrutiny Sheet'] = self._generate_final_bill_scrutiny()
+            documents['Extra Items Statement'] = self._generate_extra_items_statement()
+            documents['Certificate II'] = self._generate_certificate_ii()
+            documents['Certificate III'] = self._generate_certificate_iii()
         
         return documents
     
+    def _render_template(self, template_name: str) -> str:
+        """Render a Jinja2 template with the prepared data"""
+        try:
+            template = self.jinja_env.get_template(template_name)
+            return template.render(**self.template_data)
+        except Exception as e:
+            print(f"Failed to render template {template_name}: {e}")
+            raise
+    
     def create_pdf_documents(self, documents: Dict[str, str]) -> Dict[str, bytes]:
         """
-        Convert HTML documents to PDF format with improved margin handling
+        Convert HTML documents to PDF format with improved margin handling and timeout controls
         
         Args:
             documents: Dictionary of HTML documents
@@ -66,69 +243,136 @@ class DocumentGenerator:
         Returns:
             Dictionary of PDF documents as bytes
         """
+        import signal
+        import threading
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError
+        
         pdf_files = {}
 
-        # Prefer WeasyPrint for better CSS @page support, then fall back to xhtml2pdf
+        # Initialize PDF engines with better error handling
         render_with_weasy = None  # type: ignore
         render_with_xhtml2pdf = None  # type: ignore
         
+        # Try WeasyPrint with timeout protection
         try:
             from weasyprint import HTML, CSS  # type: ignore
             def render_with_weasy(html_str: str) -> bytes:
-                # WeasyPrint handles @page margins properly
-                return HTML(string=html_str, base_url=".").write_pdf()
+                # WeasyPrint handles @page margins properly but can hang
+                try:
+                    # Use ThreadPoolExecutor with timeout to prevent hanging
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(lambda: HTML(string=html_str, base_url=".").write_pdf())
+                        return future.result(timeout=30)  # 30 second timeout
+                except Exception as e:
+                    raise Exception(f"WeasyPrint timeout or error: {str(e)}")
         except Exception:
-            pass
+            render_with_weasy = None
             
+        # Fallback to xhtml2pdf
         try:
             from xhtml2pdf import pisa  # type: ignore
             import io as _io
             def render_with_xhtml2pdf(html_str: str) -> bytes:
-                # xhtml2pdf may not handle @page margins well, so we use reportlab options
+                # xhtml2pdf is more reliable but less feature-rich
                 output = _io.BytesIO()
-                # Set page margins in points (10mm = ~28.35 points)
                 result = pisa.CreatePDF(
                     src=html_str, 
                     dest=output, 
                     encoding="utf-8",
                     default_css=None,
-                    link_callback=None,
-                    context_meta={'page_size': 'A4', 
-                                 'margin_top': '28.35pt',
-                                 'margin_right': '28.35pt', 
-                                 'margin_bottom': '28.35pt',
-                                 'margin_left': '28.35pt'}
+                    link_callback=None
                 )
+                if result.err:
+                    raise Exception(f"xhtml2pdf error: {result.err}")
                 return output.getvalue()
         except Exception:
-            pass
+            render_with_xhtml2pdf = None
 
+        # Process each document with robust error handling
         for doc_name, html_content in documents.items():
             pdf_bytes: bytes
-            try:
-                # Prefer WeasyPrint for better CSS support
-                if render_with_weasy is not None:
-                    pdf_bytes = render_with_weasy(html_content)
-                elif render_with_xhtml2pdf is not None:
-                    pdf_bytes = render_with_xhtml2pdf(html_content)
-                else:
-                    # Last resort fallback
-                    pdf_bytes = f"PDF content for {doc_name} - No PDF library available".encode()
-            except Exception as e:
-                # Try the alternate engine if available
+            print(f"🔄 Processing {doc_name} for PDF conversion...")
+            
+            # First try xhtml2pdf (more reliable)
+            if render_with_xhtml2pdf is not None:
                 try:
-                    if render_with_xhtml2pdf is not None:
-                        pdf_bytes = render_with_xhtml2pdf(html_content)
+                    print(f"  📄 Using xhtml2pdf for {doc_name}...")
+                    pdf_bytes = render_with_xhtml2pdf(html_content)
+                    print(f"  ✅ xhtml2pdf successful for {doc_name} ({len(pdf_bytes)} bytes)")
+                except Exception as e:
+                    print(f"  ❌ xhtml2pdf failed for {doc_name}: {str(e)}")
+                    # Try WeasyPrint as fallback
+                    if render_with_weasy is not None:
+                        try:
+                            print(f"  📄 Trying WeasyPrint as fallback for {doc_name}...")
+                            pdf_bytes = render_with_weasy(html_content)
+                            print(f"  ✅ WeasyPrint successful for {doc_name} ({len(pdf_bytes)} bytes)")
+                        except Exception as e2:
+                            print(f"  ❌ WeasyPrint also failed for {doc_name}: {str(e2)}")
+                            pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
                     else:
-                        pdf_bytes = f"PDF generation failed for {doc_name}: {str(e)}".encode()
-                except Exception:
-                    pdf_bytes = f"PDF generation failed for {doc_name}: {str(e)}".encode()
+                        pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
+            # If xhtml2pdf not available, try WeasyPrint
+            elif render_with_weasy is not None:
+                try:
+                    print(f"  📄 Using WeasyPrint for {doc_name}...")
+                    pdf_bytes = render_with_weasy(html_content)
+                    print(f"  ✅ WeasyPrint successful for {doc_name} ({len(pdf_bytes)} bytes)")
+                except Exception as e:
+                    print(f"  ❌ WeasyPrint failed for {doc_name}: {str(e)}")
+                    pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
+            else:
+                # No PDF engine available
+                print(f"  ⚠️ No PDF engine available for {doc_name}, using fallback")
+                pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
                     
             pdf_files[f"{doc_name}.pdf"] = pdf_bytes
         
         # Memory cleanup
         gc.collect()
         return pdf_files
+        
+    def _create_simple_pdf_fallback(self, doc_name: str, html_content: str) -> bytes:
+        """Create a simple PDF using ReportLab as a last resort fallback"""
+        try:
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+            from bs4 import BeautifulSoup
+            import io
+            
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Parse HTML and extract text content
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Add title
+            title = Paragraph(f"<b>{doc_name}</b>", styles['Title'])
+            story.append(title)
+            story.append(Spacer(1, 12))
+            
+            # Extract and add text content
+            text_content = soup.get_text(separator='\n')
+            lines = text_content.split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                if line:
+                    para = Paragraph(line, styles['Normal'])
+                    story.append(para)
+                    story.append(Spacer(1, 6))
+            
+            doc.build(story)
+            buffer.seek(0)
+            return buffer.getvalue()
+            
+        except Exception as e:
+            print(f"ReportLab fallback also failed for {doc_name}: {str(e)}")
+            return f"PDF generation completely failed for {doc_name}: All engines failed".encode()
     
     def _generate_first_page(self) -> str:
         """Generate First Page Summary document"""

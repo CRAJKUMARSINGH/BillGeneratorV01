@@ -684,9 +684,26 @@ def main():
             progress_bar.progress(60)
 
             status_text.markdown("**Step 3/5:** 📄 Converting to PDF format...")
+            st.write("🔄 Starting PDF conversion process...")
 
-            # Create individual PDFs
-            pdf_files = generator.create_pdf_documents(documents)
+            # Create individual PDFs with progress tracking
+            try:
+                pdf_files = generator.create_pdf_documents(documents)
+                st.write(f"✅ PDF conversion completed! Generated {len(pdf_files)} PDF files.")
+                
+                # Debug: Check PDF file sizes
+                for pdf_name, pdf_content in pdf_files.items():
+                    pdf_size = len(pdf_content) if pdf_content else 0
+                    st.write(f"  📄 {pdf_name}: {pdf_size} bytes")
+                    if pdf_size == 0 or b"PDF generation failed" in pdf_content:
+                        st.warning(f"⚠️ PDF generation issue with {pdf_name}")
+                        
+            except Exception as pdf_error:
+                st.error(f"❌ PDF conversion failed: {str(pdf_error)}")
+                # Continue with empty PDF files to prevent complete failure
+                pdf_files = {f"{doc_name}.pdf": f"PDF generation failed: {str(pdf_error)}".encode() 
+                           for doc_name in documents.keys()}
+            
             progress_bar.progress(80)
 
             status_text.markdown("**Step 4/5:** 📑 Combining all documents...")

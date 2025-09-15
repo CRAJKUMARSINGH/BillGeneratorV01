@@ -16,31 +16,12 @@
 <body>
     <h1>DEVIATION STATEMENT</h1>
 
-    {% if data.header %}
-        {% for row in data.header %}
-            {% if row|length > 0 %}
-                <p>
-                    {% for item in row %}
-                        {% if item|trim %}
-                            {% set trimmed = item|trim %}
-                            {% if trimmed|length >= 10 and trimmed[4:5] == '-' and trimmed[7:8] == '-' and trimmed[:4]|int > 0 and trimmed[5:7]|int > 0 and trimmed[8:10]|int > 0 %}
-                                {{ trimmed[8:10] }}/{{ trimmed[5:7] }}/{{ trimmed[:4] }}
-                            {% else %}
-                                {{ trimmed }}
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}
-                </p>
-            {% endif %}
-        {% endfor %}
-    {% else %}
-        <p>Agreement No: {{ data.agreement_no }}</p>
-        <p>Name of Work: {{ data.name_of_work }}</p>
-        <p>Name of Firm: {{ data.name_of_firm }}</p>
-        <p>Date of Commencement: {{ data.date_commencement }}</p>
-        <p>Schedule Date of Completion: {{ data.date_completion }}</p>
-        <p>Actual Date of Completion: {{ data.actual_completion }}</p>
-    {% endif %}
+    <p><strong>Agreement No:</strong> {{ title_data.get('Agreement No :', 'N/A') }}</p>
+    <p><strong>Name of Work:</strong> {{ title_data.get('Name of Work ;-', 'N/A') }}</p>
+    <p><strong>Name of Firm:</strong> {{ title_data.get('Name of Contractor or supplier :', 'N/A') }}</p>
+    <p><strong>Date of Commencement:</strong> {{ title_data.get('Date of commencement  :', 'N/A') }}</p>
+    <p><strong>Schedule Date of Completion:</strong> {{ title_data.get('Schedule Date of completion  :', 'N/A') }}</p>
+    <p><strong>Actual Date of Completion:</strong> {{ title_data.get('Actual date of completion  :', 'N/A') }}</p>
 
     <table>
         <tr>
@@ -58,7 +39,7 @@
             <th width="12mm">Saving Amount</th>
             <th width="40mm">Remark</th>
         </tr>
-        {% for item in data.deviation_items %}
+        {% for item in work_items %}
         <tr>
             <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
             <td>{{ item.description }}</td>
@@ -80,32 +61,32 @@
         </tr>
         <tr>
             <td colspan="5"><strong>Total Work Order Amount</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.work_order_total) }}</td>
+            <td>{{ "%.2f" | format(totals.grand_total) if totals.grand_total else "" }}</td>
             <td colspan="7"></td>
         </tr>
         <tr>
-            <td colspan="5"><strong>Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_f) }}</td>
+            <td colspan="5"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
+            <td>{{ "%.2f" | format(totals.tender_premium_amount or 0) }}</td>
             <td colspan="7"></td>
         </tr>
         <tr>
             <td colspan="5"><strong>Grand Total Work Order</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.grand_total_f) }}</td>
+            <td>{{ "%.2f" | format(totals.final_total or 0) }}</td>
             <td colspan="7"></td>
         </tr>
         <tr>
             <td colspan="7"><strong>Total Executed Amount</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.executed_total) }}</td>
+            <td>{{ "%.2f" | format(totals.grand_total or 0) }}</td>
             <td colspan="5"></td>
         </tr>
         <tr>
-            <td colspan="7"><strong>Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_h) }}</td>
+            <td colspan="7"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
+            <td>{{ "%.2f" | format(totals.tender_premium_amount or 0) }}</td>
             <td colspan="5"></td>
         </tr>
         <tr>
             <td colspan="7"><strong>Grand Total Executed</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.grand_total_h) }}</td>
+            <td>{{ "%.2f" | format(totals.final_total or 0) }}</td>
             <td colspan="5"></td>
         </tr>
         <tr>
@@ -113,17 +94,17 @@
         </tr>
         <tr>
             <td colspan="9"><strong>Total Excess Amount</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.overall_excess) }}</td>
+            <td>{{ "%.2f" | format(totals.excess_amount or 0) }}</td>
             <td colspan="3"></td>
         </tr>
         <tr>
-            <td colspan="9"><strong>Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_j) }}</td>
+            <td colspan="9"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
+            <td>{{ "%.2f" | format(totals.excess_premium or 0) }}</td>
             <td colspan="3"></td>
         </tr>
         <tr>
             <td colspan="9"><strong>Grand Total Excess</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.grand_total_j) }}</td>
+            <td>{{ "%.2f" | format(totals.excess_total or 0) }}</td>
             <td colspan="3"></td>
         </tr>
         <tr>
@@ -131,19 +112,19 @@
         </tr>
         <tr>
             <td colspan="11"><strong>Total Saving Amount</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.overall_saving) }}</td>
+            <td>{{ "%.2f" | format(totals.saving_amount or 0) }}</td>
         </tr>
         <tr>
-            <td colspan="11"><strong>Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_l) }}</td>
+            <td colspan="11"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
+            <td>{{ "%.2f" | format(totals.saving_premium or 0) }}</td>
         </tr>
         <tr>
             <td colspan="11"><strong>Grand Total Saving</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.grand_total_l) }}</td>
+            <td>{{ "%.2f" | format(totals.saving_total or 0) }}</td>
         </tr>
         <tr>
             <td colspan="11"><strong>Net Difference</strong></td>
-            <td>{{ "%.2f" | format(data.deviation_summary.net_difference) }}</td>
+            <td>{{ "%.2f" | format(totals.net_difference or 0) }}</td>
         </tr>
     </table>
 </body>

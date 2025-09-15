@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>Certificate II</title>
     <style>
         @page {
@@ -13,16 +13,12 @@
             font-family: Arial, sans-serif;
             font-size: 10pt;
             margin: 0;
-            padding: 0;
+            padding: 10mm;
             line-height: 1.6;
         }
-        .container {
-            width: 100%;
-            max-width: 210mm;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        p, ul, li { break-inside: avoid; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .title { font-size: 16pt; font-weight: bold; }
+        .subtitle { font-size: 11pt; margin: 3px 0; }
         h2 {
             text-align: center;
             font-size: 12pt;
@@ -53,32 +49,52 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>II. CERTIFICATE AND SIGNATURES</h2>
+    <div class="header">
+        <div class="title">🏛️ Infrastructure Billing System</div>
+        <div class="subtitle">Certificate II</div>
+        <div class="subtitle">Date: {{ current_date }}</div>
+        <div style="font-size: 8pt; color: #666; margin-top: 5px; font-style: italic;">By: RAJKUMAR SINGH CHAUHAN</div>
+    </div>
+    
+    <h2>II. CERTIFICATE AND SIGNATURES</h2>
+    
+    <div class="cert-text">
+        <p>The measurements on which are based the entries in columns 1 to 6 of Account I, were made by <span class="manual-entry">{{ title_data.get('Name of Contractor or supplier :', 'Officer Name') }}</span> on <span class="manual-entry">{{ title_data.get('Date of measurement :', current_date) }}</span>, and are recorded at page <span class="manual-entry">___</span> of Measurement Book No. <span class="manual-entry">___</span></p>
         
-        <div class="cert-text">
-            <p>The measurements on which are based the entries in columns 1 to 6 of Account I, were made by <span class="manual-entry">{{ data.measurement_officer }}</span> on <span class="manual-entry">{{ data.measurement_date }}</span>, and are recorded at page <span class="manual-entry">{{ data.measurement_book_page }}</span> of Measurement Book No. <span class="manual-entry">{{ data.measurement_book_no }}</span></p>
-            
-            <p>*Certified that in addition to and quite apart from the quantities of work actually executed, as shown in column 4 of Account I, some work has actually been done in connection with several items and the value of such work (after deduction therefrom the proportionate amount of secured advances, if any, ultimately recoverable on account of the quantities of materials used therein) is in no case, less than the advance payments as per item 2 of the Memorandum, if payment is made.</p>
-            
-            <p>+Certified that the contractor has made satisfactory progress with the work, and that the quantities and amounts claimed are correct and the work has been executed in accordance with the specifications and the terms of the contract.</p>
-            
-            <p>I also certify that the amount claimed is not more than the amount admissible under the contract.</p>
-        </div>
+        <p><strong>*</strong> Certified that in addition to and quite apart from the quantities of work actually executed, as shown in column 4 of Account I, some work has actually been done in connection with several items and the value of such work (after deduction therefrom the proportionate amount of secured advances, if any, ultimately recoverable on account of the quantities of materials used therein) is in no case, less than the advance payments as per item 2 of the Memorandum, if payment is made.</p>
         
-        <div class="signature-section">
-            <p><span class="signature-line"></span></p>
-            <p>Dated signature of officer preparing the bill</p>
-            <p>{{ data.officer_name }}</p>
-            <p>{{ data.officer_designation }}</p>
-            
-            <br><br>
-            
-            <p><span class="signature-line"></span></p>
-            <p>+Dated signature of officer authorising payment</p>
-            <p>{{ data.authorising_officer_name }}</p>
-            <p>{{ data.authorising_officer_designation }}</p>
-        </div>
+        <p><strong>+</strong> Certified that the contractor has made satisfactory progress with the work, and that the quantities and amounts claimed are correct and the work has been executed in accordance with the specifications and the terms of the contract.</p>
+        
+        <p>I also certify that the amount claimed is not more than the amount admissible under the contract.</p>
+        
+        <p><strong>Project Details:</strong></p>
+        <ul>
+            <li><strong>Work:</strong> {{ title_data.get('Name of Work ;-', 'N/A') }}</li>
+            <li><strong>Contractor:</strong> {{ title_data.get('Name of Contractor or supplier :', 'N/A') }}</li>
+            <li><strong>Agreement No:</strong> {{ title_data.get('Agreement No.', 'N/A') }}</li>
+            <li><strong>Work Order:</strong> {{ title_data.get('Reference to work order or Agreement :', 'N/A') }}</li>
+            <li><strong>Bill Number:</strong> {{ title_data.get('Bill Number', 'N/A') }}</li>
+            <li><strong>Bill Type:</strong> {{ title_data.get('Running or Final', 'N/A') }}</li>
+        </ul>
+    </div>
+    
+    <div class="signature-section">
+        <p><span class="signature-line"></span></p>
+        <p>Dated signature of officer preparing the bill</p>
+        <p><strong>RAJKUMAR SINGH CHAUHAN</strong></p>
+        <p>System Administrator</p>
+        
+        <br><br>
+        
+        <p><span class="signature-line"></span></p>
+        <p>+Dated signature of officer authorising payment</p>
+        <p><strong>Administrative Officer</strong></p>
+        <p>PWD, Udaipur</p>
+    </div>
+    
+    <div style="margin-top: 30px; text-align: center; font-size: 8pt; color: #666;">
+        Generated by Infrastructure Billing System<br>
+        Date: {{ current_date }}
     </div>
 </body>
 </html>

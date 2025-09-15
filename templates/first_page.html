@@ -1,136 +1,161 @@
 <html>
+<!DOCTYPE html>
+<html>
 <head>
-    <title>Contractor Bill</title>
+    <title>First Page Summary</title>
     <style>
-        @page { size: A4; margin: 10mm; }
+        @page { 
+            size: A4; 
+            margin: 10mm 10mm 10mm 10mm;
+            margin-top: 10mm;
+            margin-right: 10mm;
+            margin-bottom: 10mm;
+            margin-left: 10mm;
+        }
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; font-size: 10pt; margin: 0; }
-        h1 { text-align: center; margin: 0 0 8px 0; font-size: 16pt; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 10mm;
+            font-size: 10pt; 
+        }
+        .page { 
+            margin: 0;
+            padding: 0;
+        }
+        .header { text-align: center; margin-bottom: 8px; }
+        .title { font-size: 16pt; font-weight: bold; }
+        .subtitle { font-size: 11pt; margin: 3px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }
         thead { display: table-header-group; }
-        tr { break-inside: avoid; }
-        th, td { border: 1px solid #000; padding: 4px; text-align: left; vertical-align: top; word-wrap: break-word; }
-        th { background: #f0f0f0; text-align: center; }
+        tr, img { break-inside: avoid; }
+        th, td { border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .amount { text-align: right; }
     </style>
 </head>
 <body>
-    <h1>CONTRACTOR BILL</h1>
-
-    {% if data.header %}
-        {% for row in data.header %}
-            {% if row|length > 0 %}
-                <p>
-                    {% for item in row %}
-                        {% if item|trim %}
-                            {% set trimmed = item|trim %}
-                            {% if trimmed|length >= 10 and trimmed[4:5] == '-' and trimmed[7:8] == '-' and trimmed[:4]|int > 0 and trimmed[5:7]|int > 0 and trimmed[8:10]|int > 0 %}
-                                {{ trimmed[8:10] }}/{{ trimmed[5:7] }}/{{ trimmed[:4] }}
-                            {% else %}
-                                {{ trimmed }}
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}
-                </p>
-            {% endif %}
-        {% endfor %}
-    {% else %}
-        <p>Agreement No: {{ data.agreement_no }}</p>
-        <p>Name of Work: {{ data.name_of_work }}</p>
-        <p>Name of Firm: {{ data.name_of_firm }}</p>
-        <p>Date of Commencement: {{ data.date_commencement }}</p>
-        <p>Schedule Date of Completion: {{ data.date_completion }}</p>
-        <p>Actual Date of Completion: {{ data.actual_completion }}</p>
-    {% endif %}
-
+    <div class="page">
+    <div class="header">
+        <div class="title">🏛️ Infrastructure Billing System</div>
+        <div class="subtitle">First Page Summary</div>
+        <div class="subtitle">Date: {{ current_date }}</div>
+        <div style="font-size: 8pt; color: #666; margin-top: 5px; font-style: italic;">By: RAJKUMAR SINGH CHAUHAN</div>
+    </div>
+    
+    <h3>Project Information</h3>
     <table>
-        <tr>
-            <th width="11.7mm">Unit</th>
-            <th width="16mm">Quantity executed (or supplied) since last certificate</th>
-            <th width="16mm">Quantity executed (or supplied) up to date as per MB</th>
-            <th width="11.1mm">Item No.</th>
-            <th width="74.2mm">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
-            <th width="15.3mm">Rate</th>
-            <th width="22.7mm">Amount up to date</th>
-            <th width="17.6mm">Amount Since previous bill (Total for each sub-head)</th>
-            <th width="13.9mm">Remark</th>
-        </tr>
-        {% for item in data.bill_items %}
-        <tr>
-            <td>{{ item.unit }}</td>
-            <td>{{ "%.2f" | format(item.quantity_bill) if item.quantity_bill else "" }}</td>
-            <td>{{ "%.2f" | format(item.quantity_bill) if item.quantity_bill else "" }}</td>
-            <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
-            <td>{{ item.description }}</td>
-            <td>{{ "%.2f" | format(item.rate) if item.rate else "" }}</td>
-            <td>{{ "%.2f" | format(item.amount_bill) if item.amount_bill else "" }}</td>
-            <td>{{ "%.2f" | format(item.amount_bill) if item.amount_bill else "" }}</td>
-            <td>{{ item.remark }}</td>
-        </tr>
-        {% endfor %}
-        {% if data.extra_items %}
-        <tr>
-            <td colspan="9"><strong>Extra Items</strong></td>
-        </tr>
-        <tr>
-            <td colspan="9">
-                <p>Agreement No: {{ data.agreement_no }}</p>
-                <p>Name of Work: {{ data.name_of_work }}</p>
-                <p>Name of Firm: {{ data.name_of_firm }}</p>
-                <p>Date of Commencement: {{ data.date_commencement }}</p>
-                <p>Schedule Date of Completion: {{ data.date_completion }}</p>
-                <p>Actual Date of Completion: {{ data.actual_completion }}</p>
-            </td>
-        </tr>
-        {% for item in data.extra_items %}
-        <tr>
-            <td>{{ item.unit }}</td>
-            <td>{{ "%.2f" | format(item.quantity) if item.quantity else "" }}</td>
-            <td>{{ "%.2f" | format(item.quantity) if item.quantity else "" }}</td>
-            <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
-            <td>{{ item.description }}</td>
-            <td>{{ "%.2f" | format(item.rate) if item.rate else "" }}</td>
-            <td>{{ "%.2f" | format(item.amount) if item.amount else "" }}</td>
-            <td>{{ "%.2f" | format(item.amount) if item.amount else "" }}</td>
-            <td>{{ item.remark }}</td>
-        </tr>
-        {% endfor %}
-        <tr>
-            <td colspan="6"><strong>Extra Items Total Rs.</strong></td>
-            <td>{{ "%.2f" | format(data.extra_items_base) if data.extra_items_base > 0 else 'NIL' }}</td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td colspan="6"><strong>Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(data.extra_premium) if data.extra_premium > 0 else 'NIL' }}</td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td colspan="6"><strong>Extra Items Grand Total (including Tender Premium) Rs.</strong></td>
-            <td>{{ "%.2f" | format(data.extra_items_sum) if data.extra_items_sum > 0 else 'NIL' }}</td>
-            <td></td>
-            <td></td>
-        </tr>
-        {% endif %}
-        <tr>
-            <td colspan="6"><strong>Main Items Grand Total Rs.</strong></td>
-            <td>{{ "%.2f" | format(data.bill_total) }}</td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td colspan="6"><strong>Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(data.bill_premium) }}</td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td colspan="6"><strong>Total Payable Amount Rs.</strong></td>
-            <td>{{ "%.2f" | format(data.bill_grand_total + data.extra_items_sum) }}</td>
-            <td></td>
-            <td></td>
-        </tr>
+        <tr><td><strong>Project Name:</strong></td><td>{{ title_data.get('Name of Work ;-', 'N/A') }}</td></tr>
+        <tr><td><strong>Contract No:</strong></td><td>{{ title_data.get('Agreement No.', 'N/A') }}</td></tr>
+        <tr><td><strong>Work Order No:</strong></td><td>{{ title_data.get('Reference to work order or Agreement :', 'N/A') }}</td></tr>
+        <tr><td><strong>Contractor:</strong></td><td>{{ title_data.get('Name of Contractor or supplier :', 'N/A') }}</td></tr>
+        <tr><td><strong>Bill Number:</strong></td><td>{{ title_data.get('Bill Number', 'N/A') }}</td></tr>
+        <tr><td><strong>Bill Type:</strong></td><td>{{ title_data.get('Running or Final', 'N/A') }}</td></tr>
     </table>
+    
+    <h3>Work Items Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th width="11.7mm">Unit</th>
+                <th width="16mm">Quantity executed since last certificate</th>
+                <th width="16mm">Quantity executed upto date</th>
+                <th width="11.1mm">Item No.</th>
+                <th width="74.2mm">Item of Work</th>
+                <th width="15.3mm">Rate</th>
+                <th width="22.7mm">Amount upto date</th>
+                <th width="17.6mm">Amount Since previous bill</th>
+                <th width="13.9mm">Remark</th>
+            </tr>
+        </thead>
+        <tbody>
+{% for item in work_items %}
+            <tr>
+                <td>{{ item.unit }}</td>
+                <td class="amount">{{ "%.2f"|format(item.quantity_since) if item.quantity_since > 0 else "" }}</td>
+                <td class="amount">{{ "%.2f"|format(item.quantity_upto) if item.quantity_upto > 0 else "" }}</td>
+                <td>{{ item.item_no }}</td>
+                <td>{{ item.description }}</td>
+                <td class="amount">{{ "%.2f"|format(item.rate) if item.rate > 0 else "" }}</td>
+                <td class="amount">{{ "%.2f"|format(item.amount_upto) if item.amount_upto > 0 else "" }}</td>
+                <td class="amount">{{ "%.2f"|format(item.amount_since) if item.amount_since > 0 else "" }}</td>
+                <td>{{ item.remark }}</td>
+            </tr>
+{% endfor %}
+            <tr style="font-weight: bold;">
+                <td colspan="6">TOTAL</td>
+                <td class="amount">{{ "%.2f"|format(total_amount) }}</td>
+                <td class="amount">{{ "%.2f"|format(total_amount) }}</td>
+                <td></td>
+            </tr>
+{% if tender_premium_percent > 0 %}
+            <tr style="font-weight: bold;">
+                <td colspan="6">Tender Premium @ {{ "%.2f%%"|format(tender_premium_percent) }}</td>
+                <td class="amount">{{ "%.2f"|format(premium_amount) }}</td>
+                <td class="amount">{{ "%.2f"|format(premium_amount) }}</td>
+                <td></td>
+            </tr>
+{% endif %}
+            <tr style="font-weight: bold; background-color: #e8f5e9;">
+                <td colspan="6">GRAND TOTAL</td>
+                <td class="amount">{{ "%.2f"|format(grand_total) }}</td>
+                <td class="amount">{{ "%.2f"|format(grand_total) }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+    
+{% if extra_items %}
+    <h3>Extra Items Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Unit</th>
+                <th>Quantity</th>
+                <th>Item No.</th>
+                <th>Description</th>
+                <th>Rate</th>
+                <th>Amount</th>
+                <th>Remark</th>
+            </tr>
+        </thead>
+        <tbody>
+{% for item in extra_items %}
+            <tr>
+                <td>{{ item.unit }}</td>
+                <td class="amount">{{ "%.2f"|format(item.quantity) if item.quantity > 0 else "" }}</td>
+                <td>{{ item.item_no }}</td>
+                <td>{{ item.description }}</td>
+                <td class="amount">{{ "%.2f"|format(item.rate) if item.rate > 0 else "" }}</td>
+                <td class="amount">{{ "%.2f"|format(item.amount) if item.amount > 0 else "" }}</td>
+                <td>{{ item.remark }}</td>
+            </tr>
+{% endfor %}
+            <tr style="font-weight: bold;">
+                <td colspan="5">Extra Items Total</td>
+                <td class="amount">{{ "%.2f"|format(extra_total) }}</td>
+                <td></td>
+            </tr>
+{% if tender_premium_percent > 0 %}
+            <tr style="font-weight: bold;">
+                <td colspan="5">Extra Items Premium @ {{ "%.2f%%"|format(tender_premium_percent) }}</td>
+                <td class="amount">{{ "%.2f"|format(extra_premium) }}</td>
+                <td></td>
+            </tr>
+{% endif %}
+            <tr style="font-weight: bold; background-color: #e8f5e9;">
+                <td colspan="5">Extra Items Grand Total</td>
+                <td class="amount">{{ "%.2f"|format(extra_grand_total) }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+{% endif %}
+    
+    <div style="margin-top: 20px; text-align: center; font-size: 8pt; color: #666;">
+        Generated by Infrastructure Billing System - RAJKUMAR SINGH CHAUHAN<br>
+        Date: {{ current_date }}
+    </div>
+    </div>
 </body>
 </html>

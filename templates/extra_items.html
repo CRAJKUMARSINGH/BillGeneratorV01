@@ -33,18 +33,19 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in data.extra_items %}
-                    <tr>
-                        <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
-                        <td>{{ item.remark }}</td>
-                        <td>{{ item.description }}</td>
-                        <td>{{ item.quantity | round(0) | int if item.quantity else "" }}</td>
-                        <td>{{ item.unit }}</td>
-                        <td>{{ item.rate | round(0) | int if item.rate else "" }}</td>
-                        <td>{{ item.amount | round(0) | int if item.amount else "" }}</td>
-                    </tr>
-                {% endfor %}
-                {% if not data.extra_items %}
+                {% if extra_items and extra_items|length > 0 %}
+                    {% for item in extra_items %}
+                        <tr>
+                            <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else loop.index }}</td>
+                            <td>{{ item.remark if item.remark else 'Extra Work' }}</td>
+                            <td>{{ item.description if item.description else 'N/A' }}</td>
+                            <td>{{ item.quantity | round(2) if item.quantity else "" }}</td>
+                            <td>{{ item.unit if item.unit else "" }}</td>
+                            <td>{{ item.rate | round(2) if item.rate else "" }}</td>
+                            <td>{{ item.amount | round(2) if item.amount else "" }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
                     <tr>
                         <td colspan="7" style="text-align: center; font-style: italic;">No extra items</td>
                     </tr>

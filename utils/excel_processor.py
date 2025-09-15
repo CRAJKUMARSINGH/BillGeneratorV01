@@ -1,5 +1,6 @@
 import pandas as pd
 import io
+import pandas as pd
 import hashlib
 from typing import Dict, Any
 from functools import lru_cache
@@ -52,23 +53,23 @@ class ExcelProcessor:
             except pd.errors.EmptyDataError:
                 raise Exception("The Excel file appears to be empty or corrupted. Please check the file and try again.")
             
-            except pd.errors.ExcelFileError as e:
-                if "Permission denied" in str(e) or "access" in str(e).lower():
+            except Exception as excel_error:
+                # Handle various Excel-related errors
+                error_message = str(excel_error).lower()
+                if "permission denied" in error_message or "access" in error_message:
                     if attempt < max_retries - 1:
                         time.sleep(retry_delay)
                         continue
-                    raise Exception(f"File access issue. Please close the Excel file if it's open in another program. Error: {str(e)}")
-                else:
-                    raise Exception(f"Excel file format error. Please ensure the file is a valid Excel file (.xlsx or .xls). Error: {str(e)}")
-            
-            except Exception as e:
-                if "permission" in str(e).lower() or "access" in str(e).lower() or "locked" in str(e).lower():
+                    raise Exception(f"File access issue. Please close the Excel file if it's open in another program. Error: {str(excel_error)}")
+                elif "not a valid excel" in error_message or "unsupported format" in error_message:
+                    raise Exception(f"Excel file format error. Please ensure the file is a valid Excel file (.xlsx or .xls). Error: {str(excel_error)}")
+                elif "permission" in error_message or "locked" in error_message:
                     if attempt < max_retries - 1:
                         time.sleep(retry_delay)
                         continue
-                    raise Exception(f"File access issue. Please close the Excel file if it's open in another program. Error: {str(e)}")
+                    raise Exception(f"File access issue. Please close the Excel file if it's open in another program. Error: {str(excel_error)}")
                 else:
-                    raise Exception(f"Error reading Excel file: {str(e)}")
+                    raise Exception(f"Error reading Excel file: {str(excel_error)}")
         
         raise Exception("Failed to read Excel file after multiple attempts. Please check file permissions and ensure it's not open in another program.")
     

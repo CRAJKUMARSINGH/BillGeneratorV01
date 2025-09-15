@@ -88,7 +88,7 @@
                     <td>1.</td>
                     <td>Total value of work actually measured, as per Account I, Col. 5, Entry [A]</td>
                     <td class="text-center">[A]</td>
-                    <td class="text-right">{{ data.totals.grand_total | round(0) | int }}</td>
+                    <td class="text-right">{{ totals.grand_total | round(0) | int if totals.grand_total else 0 }}</td>
                 </tr>
                 <tr>
                     <td>2.</td>
@@ -118,7 +118,7 @@
                     <td>4.</td>
                     <td class="bold-text">Total (Items 1 + 2 + 3) A+B+C</td>
                     <td></td>
-                    <td class="text-right bold-text">{{ data.totals.grand_total | round(0) | int }}</td>
+                    <td class="text-right bold-text">{{ totals.grand_total | round(0) | int if totals.grand_total else 0 }}</td>
                 </tr>
                 <tr>
                     <td colspan="4" class="bold-text text-center underline">Figures for works abstract</td>
@@ -143,7 +143,7 @@
                     <td>6.</td>
                     <td class="bold-text">Balance i.e. "up-to-date" payments (Item 4-5)</td>
                     <td></td>
-                    <td class="text-right bold-text">{{ data.totals.grand_total | round(0) | int }}</td>
+                    <td class="text-right bold-text">{{ totals.grand_total | round(0) | int if totals.grand_total else 0 }}</td>
                 </tr>
                 <tr>
                     <td>7.</td>
@@ -155,7 +155,7 @@
                     <td>8.</td>
                     <td class="bold-text">Payments now to be made, as detailed below:</td>
                     <td></td>
-                    <td class="text-right bold-text">{{ data.totals.net_payable | round(0) | int }}</td>
+                    <td class="text-right bold-text">{{ totals.net_payable | round(0) | int if totals.net_payable else 0 }}</td>
                 </tr>
                 <tr>
                     <td></td>
@@ -167,31 +167,31 @@
                     <td></td>
                     <td class="indent">SD @ 10%</td>
                     <td></td>
-                    <td class="text-right">{{ data.totals.sd_amount | round(0) | int }}</td>
+                    <td class="text-right">{{ totals.sd_amount | round(0) | int if totals.sd_amount else 0 }}</td>
                 </tr>
                 <tr>
                     <td></td>
                     <td class="indent">IT @ 2%</td>
                     <td></td>
-                    <td class="text-right">{{ data.totals.it_amount | round(0) | int }}</td>
+                    <td class="text-right">{{ totals.it_amount | round(0) | int if totals.it_amount else 0 }}</td>
                 </tr>
                 <tr>
                     <td></td>
                     <td class="indent">GST @ 2%</td>
                     <td></td>
-                    <td class="text-right">{{ data.totals.gst_amount | round(0) | int }}</td>
+                    <td class="text-right">{{ totals.gst_amount | round(0) | int if totals.gst_amount else 0 }}</td>
                 </tr>
                 <tr>
                     <td></td>
                     <td class="indent">LC @ 1%</td>
                     <td></td>
-                    <td class="text-right">{{ data.totals.lc_amount | round(0) | int }}</td>
+                    <td class="text-right">{{ totals.lc_amount | round(0) | int if totals.lc_amount else 0 }}</td>
                 </tr>
                 <tr>
                     <td></td>
                     <td class="indent">Total recovery</td>
                     <td></td>
-                    <td class="text-right">{{ data.totals.total_deductions | round(0) | int }}</td>
+                    <td class="text-right">{{ totals.total_deductions | round(0) | int if totals.total_deductions else 0 }}</td>
                 </tr>
                 <tr>
                     <td></td>
@@ -203,19 +203,19 @@
                     <td></td>
                     <td class="bold-text">(c) By cheque</td>
                     <td class="text-center">[c]</td>
-                    <td class="text-right bold-text">{{ data.totals.net_payable | round(0) | int }}</td>
+                    <td class="text-right bold-text">{{ totals.net_payable | round(0) | int if totals.net_payable else 0 }}</td>
                 </tr>
             </tbody>
         </table>
 
         <div class="payment-section">
-            <p class="bold-text">Pay Rs. {{ data.totals.net_payable | round(0) | int }}</p>
-            <p>Pay Rupees {{ data.payable_words }} (by cheque)</p>
+            <p class="bold-text">Pay Rs. {{ totals.net_payable | round(0) | int if totals.net_payable else 0 }}</p>
+            <p>Pay Rupees {{ payable_words if payable_words else 'Zero' }} (by cheque)</p>
             <br>
             <p>Dated the _____ 20____</p>
             <p style="text-align: right;">Dated initials of Disbursing Officer</p>
             <br>
-            <p>Received Rupees {{ data.payable_words }} (by cheque) as per above memorandum, on account of this bill</p>
+            <p>Received Rupees {{ payable_words if payable_words else 'Zero' }} (by cheque) as per above memorandum, on account of this bill</p>
             <br>
             <p style="text-align: right;">Signature of Contractor</p>
             <br>
