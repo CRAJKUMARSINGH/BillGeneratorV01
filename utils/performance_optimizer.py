@@ -4,6 +4,7 @@ Performance optimization utilities for BillGeneratorV01
 Provides memory management, caching, and performance monitoring
 """
 import gc
+import pandas as pd
 import psutil
 import hashlib
 from functools import lru_cache, wraps
