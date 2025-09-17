@@ -4,7 +4,17 @@ import pandas as pd
 import hashlib
 from typing import Dict, Any
 from functools import lru_cache
-from dataframe_safety_utils import DataFrameSafetyUtils
+import sys
+import os
+
+# DataFrame validation utility
+class DataFrameSafetyUtils:
+    @staticmethod
+    def is_valid_dataframe(data: Any) -> bool:
+        """Check if data is a valid non-empty DataFrame"""
+        return (isinstance(data, pd.DataFrame) and 
+                not data.empty and 
+                len(data) > 0)
 
 class ExcelProcessor:
     """Handles Excel file processing and data extraction"""
