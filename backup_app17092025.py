@@ -21,7 +21,6 @@ if str(utils_path) not in sys.path:
 from utils.excel_processor import ExcelProcessor
 from utils.document_generator import DocumentGenerator
 from utils.pdf_merger import PDFMerger
-from dataframe_safety_utils import DataFrameSafetyUtils
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
-    page_title="Enhanced Infrastructure Billing System",
+    page_title="Infrastructure Billing System",
     page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -384,7 +383,7 @@ def show_header():
                 </div>
                 <div style="font-size: 4rem; color: white;">🏛️</div>
             </div>
-            <div class="header-title">Enhanced Infrastructure Billing System</div>
+            <div class="header-title">Infrastructure Billing System</div>
             <div class="header-subtitle">Professional Document Generation & Compliance Solution</div>
             <div class="header-professional">Advanced Multi-Format Document Processing with Election Commission Compliance</div>
             <div style="margin-top: 1.5rem;">

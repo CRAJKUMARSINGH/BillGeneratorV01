@@ -4,6 +4,7 @@ import pandas as pd
 import hashlib
 from typing import Dict, Any
 from functools import lru_cache
+from dataframe_safety_utils import DataFrameSafetyUtils
 
 class ExcelProcessor:
     """Handles Excel file processing and data extraction"""
@@ -133,7 +134,8 @@ class ExcelProcessor:
                 data['extra_items_data'] = pd.DataFrame()
             
             # Validate that we have essential data
-            if not data.get('work_order_data', pd.DataFrame()).empty and not data.get('bill_quantity_data', pd.DataFrame()).empty:
+            if (DataFrameSafetyUtils.is_valid_dataframe(data.get('work_order_data')) and 
+                DataFrameSafetyUtils.is_valid_dataframe(data.get('bill_quantity_data'))):
                 print("SUCCESS: All required data extracted successfully")
                 return data
             else:
