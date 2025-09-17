@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, date
@@ -21,7 +22,36 @@ if str(utils_path) not in sys.path:
 from utils.excel_processor import ExcelProcessor
 from utils.document_generator import DocumentGenerator
 from utils.pdf_merger import PDFMerger
-from dataframe_safety_utils import DataFrameSafetyUtils
+
+# Safe import for DataFrameSafetyUtils
+try:
+    from utils.dataframe_safety_utils import DataFrameSafetyUtils
+except ImportError:
+    # Fallback: Create minimal DataFrameSafetyUtils if not available
+    class DataFrameSafetyUtils:
+        @staticmethod
+        def is_valid_dataframe(data):
+            return isinstance(data, pd.DataFrame) and not data.empty
+        
+        @staticmethod
+        def is_dataframe_or_data(data):
+            if data is None:
+                return False
+            if isinstance(data, pd.DataFrame):
+                return not data.empty
+            return bool(data)
+        
+        @staticmethod
+        def safe_dataframe_check(data, check_content=True):
+            if data is None or not isinstance(data, pd.DataFrame):
+                return False
+            return not data.empty if check_content else True
+        
+        @staticmethod
+        def get_safe_dataframe(data, default_columns=None):
+            if isinstance(data, pd.DataFrame) and not data.empty:
+                return data
+            return pd.DataFrame(columns=list(default_columns) if default_columns else [])
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1332,13 +1362,13 @@ def show_bill_quantity_entry():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("⬅️ Back to Work Order", key="back_to_wo"):
+        if st.button("⬅️ Back to Work Order", key="back_to_wo_2"):
             st.session_state.step = 1
             st.rerun()
     
     with col2:
         if total_amount > 0:
-            if st.button("➡️ Proceed to Extra Items", key="proceed_to_extra"):
+            if st.button("➡️ Proceed to Extra Items", key="proceed_to_extra_2"):
                 st.session_state.step = 3
                 st.rerun()
         else:

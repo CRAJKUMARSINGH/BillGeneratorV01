@@ -306,12 +306,13 @@ class DocumentGenerator:
                 # xhtml2pdf is more reliable but less feature-rich
                 # Clean HTML for better compatibility
                 clean_html = html_str
-                # Replace mm units with px
+                # Convert mm units to px for xhtml2pdf
                 import re
                 clean_html = re.sub(r'(\d+(?:\.\d+)?)mm', lambda m: f"{float(m.group(1)) * 3.78:.0f}px", clean_html)
-                # Remove problematic CSS
+                # Remove problematic CSS properties but KEEP table-layout for width consistency
                 clean_html = clean_html.replace('box-sizing: border-box;', '')
-                clean_html = clean_html.replace('table-layout: fixed;', '')
+                # Keep table-layout: fixed for width consistency - CRITICAL for table widths
+                # clean_html = clean_html.replace('table-layout: fixed;', '')
                 clean_html = clean_html.replace('break-inside: avoid;', '')
                 
                 output = _io.BytesIO()
@@ -447,12 +448,23 @@ class DocumentGenerator:
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
                 .subtitle {{ font-size: 11pt; margin: 3px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed !important; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word !important; overflow-wrap: break-word !important; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
+                
+                /* First Page Summary table widths - PROGRAMMATIC SPECS */
+                table.first-page-summary col.col-unit {{ width: 11.7mm; }}
+                table.first-page-summary col.col-qty-since {{ width: 16mm; }}
+                table.first-page-summary col.col-qty-upto {{ width: 16mm; }}
+                table.first-page-summary col.col-item-no {{ width: 11.1mm; }}
+                table.first-page-summary col.col-description {{ width: 74.2mm; }}
+                table.first-page-summary col.col-rate {{ width: 15.3mm; }}
+                table.first-page-summary col.col-amt-upto {{ width: 22.7mm; }}
+                table.first-page-summary col.col-amt-since {{ width: 17.6mm; }}
+                table.first-page-summary col.col-remark {{ width: 13.9mm; }}
             </style>
         </head>
         <body>
@@ -470,18 +482,29 @@ class DocumentGenerator:
             </table>
             
             <h3>Work Items Summary</h3>
-            <table>
+            <table class="first-page-summary">
+                <colgroup>
+                    <col class="col-unit">
+                    <col class="col-qty-since">
+                    <col class="col-qty-upto">
+                    <col class="col-item-no">
+                    <col class="col-description">
+                    <col class="col-rate">
+                    <col class="col-amt-upto">
+                    <col class="col-amt-since">
+                    <col class="col-remark">
+                </colgroup>
                 <thead>
                     <tr>
-                        <th width="11.7mm">Unit</th>
-                        <th width="16mm">Quantity executed (or supplied) since last certificate</th>
-                        <th width="16mm">Quantity executed (or supplied) upto date as per MB</th>
-                        <th width="11.1mm">Item No.</th>
-                        <th width="74.2mm">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
-                        <th width="15.3mm">Rate</th>
-                        <th width="22.7mm">Amount upto date</th>
-                        <th width="17.6mm">Amount Since previous bill (Total for each sub-head)</th>
-                        <th width="13.9mm">Remark</th>
+                        <th>Unit</th>
+                        <th>Quantity executed (or supplied) since last certificate</th>
+                        <th>Quantity executed (or supplied) upto date as per MB</th>
+                        <th>Item No.</th>
+                        <th>Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+                        <th>Rate</th>
+                        <th>Amount upto date</th>
+                        <th>Amount Since previous bill (Total for each sub-head)</th>
+                        <th>Remark</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -569,12 +592,27 @@ class DocumentGenerator:
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 14pt; font-weight: bold; }}
                 .subtitle {{ font-size: 10pt; margin: 3px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 4px 0; table-layout: fixed; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 4px 0; table-layout: fixed !important; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word; font-size: 8.5pt; }}
+                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word !important; overflow-wrap: break-word !important; font-size: 8.5pt; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
+                
+                /* Deviation Statement table widths - TESTED SPECS */
+                table.deviation-statement col.col-item-no {{ width: 6mm; }}
+                table.deviation-statement col.col-description {{ width: 95mm; }}
+                table.deviation-statement col.col-unit {{ width: 10mm; }}
+                table.deviation-statement col.col-qty-wo {{ width: 10mm; }}
+                table.deviation-statement col.col-rate {{ width: 12mm; }}
+                table.deviation-statement col.col-amt-wo {{ width: 12mm; }}
+                table.deviation-statement col.col-qty-executed {{ width: 12mm; }}
+                table.deviation-statement col.col-amt-executed {{ width: 12mm; }}
+                table.deviation-statement col.col-excess-qty {{ width: 12mm; }}
+                table.deviation-statement col.col-excess-amt {{ width: 12mm; }}
+                table.deviation-statement col.col-saving-qty {{ width: 12mm; }}
+                table.deviation-statement col.col-saving-amt {{ width: 12mm; }}
+                table.deviation-statement col.col-remarks {{ width: 40mm; }}
             </style>
         </head>
         <body>
@@ -584,22 +622,37 @@ class DocumentGenerator:
                 <div class="subtitle">Date: {current_date}</div>
             </div>
             
-            <table>
+            <table class="deviation-statement">
+                <colgroup>
+                    <col class="col-item-no">
+                    <col class="col-description">
+                    <col class="col-unit">
+                    <col class="col-qty-wo">
+                    <col class="col-rate">
+                    <col class="col-amt-wo">
+                    <col class="col-qty-executed">
+                    <col class="col-amt-executed">
+                    <col class="col-excess-qty">
+                    <col class="col-excess-amt">
+                    <col class="col-saving-qty">
+                    <col class="col-saving-amt">
+                    <col class="col-remarks">
+                </colgroup>
                 <thead>
                     <tr>
-                        <th width="6mm">ITEM No.</th>
-                        <th width="95mm">Description</th>
-                        <th width="10mm">Unit</th>
-                        <th width="10mm">Qty as per Work Order</th>
-                        <th width="12mm">Rate</th>
-                        <th width="12mm">Amt as per Work Order Rs.</th>
-                        <th width="12mm">Qty Executed</th>
-                        <th width="12mm">Amt as per Executed Rs.</th>
-                        <th width="12mm">Excess Qty</th>
-                        <th width="12mm">Excess Amt Rs.</th>
-                        <th width="12mm">Saving Qty</th>
-                        <th width="12mm">Saving Amt Rs.</th>
-                        <th width="40mm">REMARKS/ REASON.</th>
+                        <th>ITEM No.</th>
+                        <th>Description</th>
+                        <th>Unit</th>
+                        <th>Qty as per Work Order</th>
+                        <th>Rate</th>
+                        <th>Amt as per Work Order Rs.</th>
+                        <th>Qty Executed</th>
+                        <th>Amt as per Executed Rs.</th>
+                        <th>Excess Qty</th>
+                        <th>Excess Amt Rs.</th>
+                        <th>Saving Qty</th>
+                        <th>Saving Amt Rs.</th>
+                        <th>REMARKS/ REASON.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -698,10 +751,10 @@ class DocumentGenerator:
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
                 .subtitle {{ font-size: 11pt; margin: 3px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed !important; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word !important; overflow-wrap: break-word !important; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -789,12 +842,20 @@ class DocumentGenerator:
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
                 .subtitle {{ font-size: 11pt; margin: 3px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed !important; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word !important; overflow-wrap: break-word !important; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
+                
+                /* Extra Items Statement table widths - VALIDATED SPECS */
+                table.extra-items col.col-unit {{ width: 11.7mm; }}
+                table.extra-items col.col-quantity {{ width: 16mm; }}
+                table.extra-items col.col-item-no {{ width: 11.1mm; }}
+                table.extra-items col.col-description {{ width: 74.2mm; }}
+                table.extra-items col.col-rate {{ width: 15.3mm; }}
+                table.extra-items col.col-amount {{ width: 22.7mm; }}
             </style>
         </head>
         <body>
@@ -808,7 +869,15 @@ class DocumentGenerator:
         if isinstance(self.extra_items_data, pd.DataFrame) and not self.extra_items_data.empty:
             html_content += """
             <h3>Extra Items</h3>
-            <table>
+            <table class="extra-items">
+                <colgroup>
+                    <col class="col-item-no">
+                    <col class="col-description">
+                    <col class="col-unit">
+                    <col class="col-quantity">
+                    <col class="col-rate">
+                    <col class="col-amount">
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Item No.</th>
