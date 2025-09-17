@@ -90,8 +90,4 @@ class DataFrameSafetyUtils:
 
         return pd.DataFrame()
 
-# Save the utility to a file
-with open('/home/user/output/dataframe_safety_utils.py', 'w') as f:
-    f.write(dataframe_safety_utils)
-
-print("✅ Created DataFrame Safety Utilities")
+# Utility class ready for import

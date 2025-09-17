@@ -43,7 +43,6 @@ class EnhancedBillGenerator:
 
     def __init__(self):
         self.config = EnhancedConfig()
-        self.excel_processor = ExcelProcessor(self.config)
         self.df_utils = DataFrameSafetyUtils()
         self.excel_interface = ExcelLikeQuantityEntry()
         self._initialize_session_state()
@@ -129,8 +128,10 @@ class EnhancedBillGenerator:
         if uploaded_file:
             try:
                 with st.spinner("Processing Excel file..."):
+                    # Create Excel processor with uploaded file
+                    excel_processor = ExcelProcessor(uploaded_file)
                     # Use safe DataFrame processing
-                    data = self.excel_processor.process_excel_file(uploaded_file)
+                    data = excel_processor.process_excel()
 
                     # Safely check and store data
                     if self.df_utils.is_dataframe_or_data(data.get('work_order_data')):
@@ -210,8 +211,10 @@ class EnhancedBillGenerator:
 
             if uploaded_file:
                 try:
+                    # Create Excel processor with uploaded file
+                    excel_processor = ExcelProcessor(uploaded_file)
                     # Process work order file safely
-                    data = self.excel_processor.process_excel_file(uploaded_file)
+                    data = excel_processor.process_excel()
 
                     if self.df_utils.is_valid_dataframe(data.get('work_order_data')):
                         st.session_state.work_order_data = data['work_order_data']

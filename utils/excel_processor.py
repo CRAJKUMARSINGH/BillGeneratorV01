@@ -12,6 +12,12 @@ class ExcelProcessor:
         self.uploaded_file = uploaded_file
         self.workbook = None
     
+    def process_excel_file(self, uploaded_file) -> Dict[str, Any]:
+        """Process Excel file - compatibility method for enhanced_app.py"""
+        # Update the uploaded file and process it
+        self.uploaded_file = uploaded_file
+        return self.process_excel()
+    
     def _safe_read_excel(self):
         """
         Safely read Excel file with comprehensive error handling for common access issues
