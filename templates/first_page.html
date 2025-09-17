@@ -5,42 +5,67 @@
     <title>First Page Summary</title>
     <style>
         @page { 
-            size: A4; 
+            size: A4 portrait; 
             margin: 10mm 10mm 10mm 10mm;
-            margin-top: 10mm;
-            margin-right: 10mm;
-            margin-bottom: 10mm;
-            margin-left: 10mm;
         }
         * { box-sizing: border-box; }
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 10mm;
-            font-size: 10pt; 
-        }
-        .page { 
+        body {
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
         }
-        .header { text-align: center; margin-bottom: 8px; }
+        .container {
+            margin: 10mm 10mm 10mm 10mm;
+            width: 190mm;
+            min-height: 287mm;
+            box-sizing: border-box;
+        }
+        .header { text-align: center; margin-bottom: 10mm; }
         .title { font-size: 16pt; font-weight: bold; }
         .subtitle { font-size: 11pt; margin: 3px 0; }
-        table { width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }
+        .table-wrapper {
+            width: 100%;
+            overflow: hidden;
+            border: 0.026mm solid black;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 0 auto;
+            margin-bottom: 15mm;
+            border: 0.026mm solid black;
+        }
         thead { display: table-header-group; }
         tr, img { break-inside: avoid; }
-        th, td { border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }
-        th { background-color: #f0f0f0; font-weight: bold; }
+        th, td {
+            border: 0.026mm solid black;
+            padding: 0.6mm;
+            font-size: 8pt;
+            vertical-align: top;
+            height: 18mm;
+            word-wrap: break-word;
+        }
+        th {
+            font-size: 7pt;
+            text-align: center;
+            vertical-align: middle;
+            height: 15mm;
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .description {
+            text-align: justify;
+            overflow-wrap: break-word;
+        }
         .amount { text-align: right; }
     </style>
 </head>
 <body>
-    <div class="page">
+    <div class="container">
     <div class="header">
-        <div class="title">🏛️ Infrastructure Billing System</div>
-        <div class="subtitle">First Page Summary</div>
-        <div class="subtitle">Date: {{ current_date }}</div>
-        <div style="font-size: 8pt; color: #666; margin-top: 5px; font-style: italic;">By: RAJKUMAR SINGH CHAUHAN</div>
+        <div class="title">CONTRACTOR BILL</div>
     </div>
     
     <h3>Project Information</h3>
@@ -54,32 +79,44 @@
     </table>
     
     <h3>Work Items Summary</h3>
-    <table>
-        <thead>
-            <tr>
-                <th width="11.7mm">Unit</th>
-                <th width="16mm">Quantity executed since last certificate</th>
-                <th width="16mm">Quantity executed upto date</th>
-                <th width="11.1mm">Item No.</th>
-                <th width="74.2mm">Item of Work</th>
-                <th width="15.3mm">Rate</th>
-                <th width="22.7mm">Amount upto date</th>
-                <th width="17.6mm">Amount Since previous bill</th>
-                <th width="13.9mm">Remark</th>
-            </tr>
-        </thead>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10.06mm;">Unit</th>
+                    <th style="width: 13.76mm;">Quantity executed (or supplied) since last certificate</th>
+                    <th style="width: 13.76mm;">Quantity executed (or supplied) upto date as per MB</th>
+                    <th style="width: 9.55mm;">S. No.</th>
+                    <th style="width: 63.83mm;">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+                    <th style="width: 13.16mm;">Rate</th>
+                    <th style="width: 19.53mm;">Upto date Amount</th>
+                    <th style="width: 15.15mm;">Amount Since previous bill (Total for each sub-head)</th>
+                    <th style="width: 11.96mm;">Remarks</th>
+                </tr>
+                <tr>
+                    <th>1</th>
+                    <th>2</th>
+                    <th>3</th>
+                    <th>4</th>
+                    <th>5</th>
+                    <th>6</th>
+                    <th>7</th>
+                    <th>8</th>
+                    <th>9</th>
+                </tr>
+            </thead>
         <tbody>
 {% for item in work_items %}
             <tr>
-                <td>{{ item.unit }}</td>
-                <td class="amount">{{ "%.2f"|format(item.quantity_since) if item.quantity_since > 0 else "" }}</td>
-                <td class="amount">{{ "%.2f"|format(item.quantity_upto) if item.quantity_upto > 0 else "" }}</td>
-                <td>{{ item.item_no }}</td>
-                <td>{{ item.description }}</td>
-                <td class="amount">{{ "%.2f"|format(item.rate) if item.rate > 0 else "" }}</td>
-                <td class="amount">{{ "%.2f"|format(item.amount_upto) if item.amount_upto > 0 else "" }}</td>
-                <td class="amount">{{ "%.2f"|format(item.amount_since) if item.amount_since > 0 else "" }}</td>
-                <td>{{ item.remark }}</td>
+                <td style="width: 10.06mm;">{{ item.unit }}</td>
+                <td style="width: 13.76mm;" class="amount">{{ "%.2f"|format(item.quantity_since) if item.quantity_since > 0 else "" }}</td>
+                <td style="width: 13.76mm;" class="amount">{{ "%.2f"|format(item.quantity_upto) if item.quantity_upto > 0 else "" }}</td>
+                <td style="width: 9.55mm;">{{ item.item_no }}</td>
+                <td class="description" style="width: 63.83mm;">{{ item.description }}</td>
+                <td style="width: 13.16mm;" class="amount">{{ "%.2f"|format(item.rate) if item.rate > 0 else "" }}</td>
+                <td style="width: 19.53mm;" class="amount">{{ "%.2f"|format(item.amount_upto) if item.amount_upto > 0 else "" }}</td>
+                <td style="width: 15.15mm;" class="amount">{{ "%.2f"|format(item.amount_since) if item.amount_since > 0 else "" }}</td>
+                <td style="width: 11.96mm;">{{ item.remark }}</td>
             </tr>
 {% endfor %}
             <tr style="font-weight: bold;">
@@ -103,7 +140,8 @@
                 <td></td>
             </tr>
         </tbody>
-    </table>
+        </table>
+    </div>
     
 {% if extra_items %}
     <h3>Extra Items Summary</h3>
@@ -153,8 +191,7 @@
 {% endif %}
     
     <div style="margin-top: 20px; text-align: center; font-size: 8pt; color: #666;">
-        Generated by Infrastructure Billing System - RAJKUMAR SINGH CHAUHAN<br>
-        Date: {{ current_date }}
+        Generated on: {{ current_date }}
     </div>
     </div>
 </body>

@@ -1,0 +1,118 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Deviation Statement</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 10pt; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 5px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .bold { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>Deviation Statement</h2>
+    <p>Agreement No: {{ header_data[12][4] if header_data and header_data | length > 12 and header_data[12] | length > 4 else '48/2024-25' }}</p>
+    <p>Name of Work: {{ header_data[8][1] if header_data and header_data | length > 8 and header_data[8] | length > 1 else 'Electric Repair and MTC work at Govt. Ambedkar hostel Ambamata, Govardhanvilas, Udaipur' }}</p>
+    <table>
+        <thead>
+            <tr>
+                <th>ITEM No.</th>
+                <th>Description</th>
+                <th>Unit</th>
+                <th>Qty as per Work Order</th>
+                <th>Rate</th>
+                <th>Amt as per Work Order Rs.</th>
+                <th>Qty Executed</th>
+                <th>Amt as per Executed Rs.</th>
+                <th>Excess Qty</th>
+                <th>Excess Amt Rs.</th>
+                <th>Saving Qty</th>
+                <th>Saving Amt Rs.</th>
+                <th>REMARKS/ REASON</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if data['items'] and data['items'] is iterable and data['items'] | length > 0 %}
+                {% for item in data['items'] %}
+                    <tr>
+                        <td>{{ item.serial_no | default("") }}</td>
+                        <td>{{ item.description | default("") }}</td>
+                        <td>{{ item.unit | default("") }}</td>
+                        <td>{{ item.qty_wo if item.unit|trim else "" }}</td>
+                        <td>{{ item.rate if item.unit|trim else "" }}</td>
+                        <td>{{ item.amt_wo if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.qty_bill if item.unit|trim else "" }}</td>
+                        <td>{{ item.amt_bill if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.excess_qty if item.unit|trim else "" }}</td>
+                        <td>{{ item.excess_amt if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.saving_qty if item.unit|trim else "" }}</td>
+                        <td>{{ item.saving_amt if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.remark | default("") }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="13">No deviation items available</td></tr>
+            {% endif %}
+            {% if data.summary and data.summary is mapping %}
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">Grand Total Rs.</td>
+                    <td></td>
+                    <td>{{ data.summary.work_order_total | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.executed_total | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.overall_excess | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.overall_saving | default("") }}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">Add Tender Premium ({{ "%.2f%%" % (data.summary.premium.percent * 100 if data.summary.premium.percent is defined else 0) }})</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_f | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_h | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_j | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_l | default("") }}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">Grand Total including Tender Premium Rs.</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_f | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_h | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_j | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_l | default("") }}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">
+                        {% if data.summary.net_difference is defined and data.summary.net_difference > 0 %}
+                            Overall Excess With Respect to the Work Order Amount Rs.
+                        {% else %}
+                            Overall Saving With Respect to the Work Order Amount Rs.
+                        {% endif %}
+                    </td>
+                    <td colspan="3"></td>
+                    <td>{{ data.summary.net_difference | default("") }}</td>
+                    <td colspan="5"></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="13">No summary data available</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</body>
+</html>

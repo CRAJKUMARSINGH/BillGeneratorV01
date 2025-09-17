@@ -218,14 +218,14 @@ class StreamlitOptimizer:
             
         try:
             st.set_page_config(
-                page_title="Infrastructure Billing System",
+                page_title="Bill Generator",
                 page_icon="🏛️",
                 layout="wide",
                 initial_sidebar_state="expanded",
                 menu_items={
                     'Get Help': None,
                     'Report a bug': None,
-                    'About': "Infrastructure Billing System v2.1 - Optimized Edition"
+                    'About': "Bill Generator v2.1 - Optimized Edition"
                 }
             )
         except:

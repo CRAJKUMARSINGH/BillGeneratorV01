@@ -1,10 +1,10 @@
 @echo off
-title Infrastructure Billing System - OPTIMIZED VERSION
+title Bill Generator - OPTIMIZED VERSION
 color 0A
 
 echo.
 echo ========================================
-echo   Infrastructure Billing System
+echo   Bill Generator
 echo   OPTIMIZED VERSION 3.0
 echo   By: RAJKUMAR SINGH CHAUHAN
 echo ========================================

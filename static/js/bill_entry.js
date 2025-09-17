@@ -1,5 +1,5 @@
 /**
- * Bill Entry JavaScript - Infrastructure Billing System
+ * Bill Entry JavaScript - Enhanced Bill Generator
  * Handles form interactions, real-time calculations, and validation
  */
 

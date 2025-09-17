@@ -24,7 +24,7 @@ class EnhancedConfig:
         """Load comprehensive configuration from environment and defaults"""
         
         # Application Settings
-        self.APP_NAME = "Infrastructure Billing System - OPTIMIZED"
+        self.APP_NAME = "Bill Generator - OPTIMIZED"
         self.APP_VERSION = "2.0.0-ENHANCED"
         self.APP_DESCRIPTION = "Professional Infrastructure Billing Document Generator with Advanced Features"
         

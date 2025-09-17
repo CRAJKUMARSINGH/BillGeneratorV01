@@ -1,44 +1,81 @@
+<!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Deviation Statement</title>
     <style>
         @page { size: A4 landscape; margin: 10mm; }
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; font-size: 9pt; margin: 0; }
-        h1 { text-align: center; margin: 0 0 8px 0; font-size: 14pt; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5pt; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+        }
+        .container {
+            margin: 10mm;
+            width: calc(100% - 20mm);
+            min-height: calc(100vh - 20mm);
+            box-sizing: border-box;
+        }
+        h2 { text-align: center; margin: 0 0 10mm 0; font-size: 14pt; }
+        p { margin: 2mm 0; font-size: 9pt; }
+        .table-wrapper {
+            width: 100%;
+            overflow: hidden;
+            border: 1px solid black;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 0 auto;
+            border: 1px solid black;
+        }
         thead { display: table-header-group; }
         tr { break-inside: avoid; }
-        th, td { border: 1px solid #000; padding: 3px; text-align: left; vertical-align: top; word-wrap: break-word; }
-        th { background: #f0f0f0; text-align: center; }
+        th, td {
+            border: 1px solid black;
+            padding: 3px;
+            font-size: 7pt;
+            vertical-align: top;
+            word-wrap: break-word;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            text-align: center;
+        }
+        .bold { font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>DEVIATION STATEMENT</h1>
-
-    <p><strong>Agreement No:</strong> {{ title_data.get('Agreement No :', 'N/A') }}</p>
-    <p><strong>Name of Work:</strong> {{ title_data.get('Name of Work ;-', 'N/A') }}</p>
-    <p><strong>Name of Firm:</strong> {{ title_data.get('Name of Contractor or supplier :', 'N/A') }}</p>
-    <p><strong>Date of Commencement:</strong> {{ title_data.get('Date of commencement  :', 'N/A') }}</p>
-    <p><strong>Schedule Date of Completion:</strong> {{ title_data.get('Schedule Date of completion  :', 'N/A') }}</p>
-    <p><strong>Actual Date of Completion:</strong> {{ title_data.get('Actual date of completion  :', 'N/A') }}</p>
-
-    <table>
-        <tr>
-            <th width="6mm">Item No.</th>
-            <th width="95mm">Item of Work</th>
-            <th width="10mm">Unit</th>
-            <th width="10mm">Qty as per Work Order</th>
-            <th width="12mm">Rate</th>
-            <th width="12mm">Amount as per Work Order</th>
-            <th width="12mm">Qty as Executed</th>
-            <th width="12mm">Amount as Executed</th>
-            <th width="12mm">Excess Qty</th>
-            <th width="12mm">Excess Amount</th>
-            <th width="12mm">Saving Qty</th>
-            <th width="12mm">Saving Amount</th>
-            <th width="40mm">Remark</th>
-        </tr>
+    <div class="container">
+        <h2>Deviation Statement</h2>
+        <p>Agreement No: {{ title_data.get('Agreement No.', 'N/A') }}</p>
+        <p>Name of Work: {{ title_data.get('Name of Work ;-', 'N/A') }}</p>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ITEM No.</th>
+                        <th>Description</th>
+                        <th>Unit</th>
+                        <th>Qty as per Work Order</th>
+                        <th>Rate</th>
+                        <th>Amt as per Work Order Rs.</th>
+                        <th>Qty Executed</th>
+                        <th>Amt as per Executed Rs.</th>
+                        <th>Excess Qty</th>
+                        <th>Excess Amt Rs.</th>
+                        <th>Saving Qty</th>
+                        <th>Saving Amt Rs.</th>
+                        <th>REMARKS/ REASON</th>
+                    </tr>
+                </thead>
+                <tbody>
         {% for item in work_items %}
         <tr>
             <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
@@ -126,6 +163,9 @@
             <td colspan="11"><strong>Net Difference</strong></td>
             <td>{{ "%.2f" | format(totals.net_difference or 0) }}</td>
         </tr>
-    </table>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </body>
 </html>

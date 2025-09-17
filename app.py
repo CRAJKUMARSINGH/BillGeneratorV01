@@ -1,1067 +1,1176 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from datetime import datetime, date
+import io
+import base64
+from pathlib import Path
 import os
-import zipfile
-import tempfile
-import gc
-from datetime import datetime
+import sys
 import traceback
-from functools import lru_cache
-import time
-import threading
+import json
+import tempfile
+from typing import Dict, List, Any, Optional, Union
+import logging
+
+# Add utils to path for imports
+utils_path = Path(__file__).parent / "utils"
+if str(utils_path) not in sys.path:
+    sys.path.append(str(utils_path))
+
 from utils.excel_processor import ExcelProcessor
 from utils.document_generator import DocumentGenerator
 from utils.pdf_merger import PDFMerger
-from utils.zip_packager import ZipPackager
-from utils.performance_optimizer import PerformanceOptimizer
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
-    page_title="Infrastructure Billing System - OPTIMIZED",
-    page_icon="🏛️",
+    page_title="Enhanced Bill Generator",
+    page_icon="📋",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for professional appearance with enhanced features
-@st.cache_data
-def get_custom_css():
-    """Return custom CSS - cached for better performance"""
-    return """
+# Custom CSS for enhanced UI
+def load_custom_css():
+    st.markdown("""
     <style>
     /* Main container styling */
-    .main > div {
-        padding: 2rem 1rem;
-    }
-
-    /* Header styling - Enhanced green design with animations */
-    .header-container {
-        background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 50%, #81C784 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .header-container::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-        animation: shimmer 3s infinite;
-    }
-
-    @keyframes shimmer {
-        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-    }
-
-    .header-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        text-align: center;
-        position: relative;
-        z-index: 1;
-    }
-
-    .header-subtitle {
-        font-size: 1.2rem;
-        text-align: center;
-        opacity: 0.9;
-        margin-bottom: 0.5rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .header-professional {
-        font-size: 1rem;
-        text-align: center;
-        color: #e8f5e9;
-        opacity: 0.85;
-        margin-bottom: 0.5rem;
-        font-weight: 400;
-        font-style: italic;
-        letter-spacing: 0.8px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .header-initiative {
-        font-size: 0.9rem;
-        text-align: center;
-        color: #ffffff;
-        opacity: 0.9;
-        margin-bottom: 0;
-        font-weight: 500;
-        background: rgba(255,255,255,0.1);
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        border: 1px solid rgba(255,255,255,0.2);
-        display: inline-block;
-        margin: 0 auto;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: relative;
-        z-index: 1;
-    }
-
-    /* Performance Dashboard Styling */
-    .performance-dashboard {
-        background: linear-gradient(135deg, #E8F4FD 0%, #B3E5FC 100%);
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 1rem 0;
-        border-left: 5px solid #0277BD;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    .efficiency-badge {
-        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 25px;
-        font-size: 0.9rem;
-        font-weight: bold;
-        display: inline-block;
-        margin: 0.5rem;
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-    }
-
-    /* Card styling */
-    .info-card {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        transition: transform 0.3s ease;
-    }
-
-    .info-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    .upload-card {
-        background: #ffffff;
-        border: 2px dashed #007bff;
-        border-radius: 10px;
-        padding: 2rem;
-        text-align: center;
-        margin-bottom: 2rem;
-        transition: all 0.3s ease;
-    }
-
-    .upload-card:hover {
-        border-color: #0056b3;
-        background: #f8f9ff;
-        transform: scale(1.02);
-    }
-
-    /* Status indicators */
-    .status-success {
-        background: #d4edda;
-        color: #155724;
-        padding: 1rem;
-        border-radius: 5px;
-        border-left: 4px solid #28a745;
-        margin: 1rem 0;
-    }
-
-    .status-error {
-        background: #f8d7da;
-        color: #721c24;
-        padding: 1rem;
-        border-radius: 5px;
-        border-left: 4px solid #dc3545;
-        margin: 1rem 0;
-    }
-
-    .status-info {
-        background: #d1ecf1;
-        color: #0c5460;
-        padding: 1rem;
-        border-radius: 5px;
-        border-left: 4px solid #17a2b8;
-        margin: 1rem 0;
-    }
-
-    /* Progress styling */
-    .progress-container {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-    }
-
-    /* Download button styling */
-    .download-section {
-        background: #e8f5e9;
-        border-radius: 10px;
-        padding: 2rem;
-        text-align: center;
-        margin: 2rem 0;
-        border: 1px solid #4caf50;
-    }
-
-    /* Feature list styling */
-    .feature-list {
-        background: #ffffff;
-        border-radius: 8px;
-        padding: 1.5rem;
-        border: 1px solid #e9ecef;
-    }
-
-    .feature-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.8rem;
-        padding: 0.5rem;
-        background: #f8f9fa;
-        border-radius: 5px;
-    }
-
-    .feature-icon {
-        color: #28a745;
-        font-weight: bold;
-        margin-right: 0.8rem;
-    }
-
-    /* Balloon animation container */
-    .balloon-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        overflow: hidden;
-    }
-
-    .balloon {
-        position: absolute;
-        font-size: 2rem;
-        animation: float 6s ease-in-out infinite;
-    }
-
-    .balloon1 {
-        left: 10%;
-        animation-delay: 0s;
-    }
-
-    .balloon2 {
-        left: 50%;
-        animation-delay: 2s;
-    }
-
-    .balloon3 {
-        left: 80%;
-        animation-delay: 4s;
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-20px) rotate(5deg); }
-    }
-
-    /* Instructions styling - Enhanced and colorful */
-    .instructions-container {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 15px;
-        padding: 3rem;
-        margin-top: 3rem;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    }
-
-    .how-to-title {
-        text-align: center;
-        color: #2c3e50;
-        font-size: 2.2rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .how-to-subtitle {
-        text-align: center;
-        color: #6c757d;
-        font-size: 1.1rem;
-        margin-bottom: 2.5rem;
-        font-style: italic;
-    }
-
-    .instruction-step {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 2rem;
-        padding: 1.5rem;
-        background: #ffffff;
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .instruction-step:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-    }
-
-    .instruction-step::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 5px;
-        height: 100%;
-        background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
-        background-size: 400% 400%;
-        animation: gradientShift 3s ease infinite;
-    }
-
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    .step-number {
+    .main-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 0;
+        border-radius: 10px;
+        text-align: center;
         color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Mode selection cards */
+    .mode-card {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .mode-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .mode-card.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+    }
+
+    /* Progress indicator styles */
+    .progress-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 2rem 0;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+
+    .progress-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        flex: 1;
+        position: relative;
+    }
+
+    .progress-circle {
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
-        width: 50px;
-        height: 50px;
+        background: #e0e0e0;
         display: flex;
         align-items: center;
         justify-content: center;
+        color: white;
         font-weight: bold;
-        font-size: 1.2rem;
-        margin-right: 1.5rem;
-        flex-shrink: 0;
-        box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        font-size: 0.9rem;
+        z-index: 1;
+        position: relative;
     }
 
-    .step-content {
-        flex: 1;
+    .progress-circle.completed {
+        background: #28a745;
     }
 
-    .step-title {
-        font-weight: 700;
+    .progress-circle.current {
+        background: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Form styling */
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-bottom: 2rem;
+        border: 1px solid #e9ecef;
+    }
+
+    .form-section h3 {
         color: #2c3e50;
-        margin-bottom: 0.8rem;
-        font-size: 1.3rem;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
     }
 
-    .step-description {
-        color: #555;
-        font-size: 1rem;
-        line-height: 1.6;
+    /* Metrics styling */
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border-left: 4px solid #667eea;
     }
 
-    .simple-steps {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
     }
 
-    .simple-step-card {
+    .metric-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    /* Button styling */
+    .stButton > button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        text-align: center;
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-        transition: transform 0.3s ease;
-    }
-
-    .simple-step-card:hover {
-        transform: scale(1.05);
-    }
-
-    .simple-step-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        display: block;
-    }
-
-    .simple-step-title {
-        font-size: 1.2rem;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
         font-weight: 600;
-        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
     }
 
-    .simple-step-desc {
-        font-size: 0.9rem;
-        opacity: 0.9;
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
-    /* Responsive design */
+    /* Mobile responsiveness */
     @media (max-width: 768px) {
-        .header-title {
-            font-size: 2rem;
+        .mode-card {
+            margin: 0.5rem 0;
+            padding: 1.5rem;
         }
 
-        .header-subtitle {
-            font-size: 1rem;
+        .progress-container {
+            flex-direction: column;
+            gap: 1rem;
         }
 
-        .upload-card {
+        .form-section {
             padding: 1rem;
         }
     }
     </style>
-    """
-
-def inject_custom_css():
-    """Inject cached custom CSS for better performance"""
-    st.markdown(get_custom_css(), unsafe_allow_html=True)
-
-def display_performance_dashboard():
-    """Display real-time performance metrics and efficiency insights"""
-    st.markdown("""
-    <div class="performance-dashboard">
-        <h3 style="color: #0277BD; margin-bottom: 1rem;">⚡ Performance Excellence Dashboard</h3>
-    </div>
     """, unsafe_allow_html=True)
-    
-    # Performance metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        efficiency_score = st.session_state.get('efficiency_score', 0)
-        st.metric("Efficiency Score", f"{efficiency_score}%", delta=f"+{min(efficiency_score, 15)}%")
-        if efficiency_score > 85:
-            st.markdown('<div class="efficiency-badge">🏆 World Class</div>', unsafe_allow_html=True)
-    
-    with col2:
-        processing_history = st.session_state.get('processing_history', [])
-        avg_time = sum(h.get('processing_time', 0) for h in processing_history[-5:]) / max(len(processing_history[-5:]), 1)
-        st.metric("Avg Processing Time", f"{avg_time:.2f}s", delta=f"-{max(0, avg_time-2):.1f}s")
-    
-    with col3:
-        files_processed = len(processing_history)
-        st.metric("Files Processed", files_processed, delta=f"+{min(files_processed, 3)}")
-    
-    with col4:
-        current_time = datetime.now().strftime("%H:%M:%S")
-        st.metric("System Status", "🟢 Optimal", delta="Real-time")
 
-def calculate_efficiency_score(processing_time, items_count, file_size):
-    """Calculate efficiency score based on processing metrics"""
-    # Base score calculation inspired by world-class performance metrics
-    base_score = 100
-    
-    # Penalty for slow processing (world-class target: <5 seconds)
-    if processing_time > 5:
-        base_score -= min(30, (processing_time - 5) * 5)
-    
-    # Bonus for handling complex files efficiently
-    if items_count > 20 and processing_time < 3:
-        base_score += 15
-    
-    # Bonus for large file optimization
-    if file_size > 50000 and processing_time < 4:  # 50KB+
-        base_score += 10
-    
-    return max(0, min(100, base_score))
+# Initialize session state
+def initialize_session_state():
+    """Initialize session state variables"""
+    if 'mode' not in st.session_state:
+        st.session_state.mode = None
 
-def main():
-    # Initialize session state with efficiency tracking
-    if 'processing_complete' not in st.session_state:
-        st.session_state.processing_complete = False
-    if 'generated_files' not in st.session_state:
-        st.session_state.generated_files = {}
+    if 'step' not in st.session_state:
+        st.session_state.step = 1
+
+    if 'work_order_data' not in st.session_state:
+        st.session_state.work_order_data = None
+
     if 'title_data' not in st.session_state:
         st.session_state.title_data = None
-    if 'performance_metrics' not in st.session_state:
-        st.session_state.performance_metrics = {}
-    if 'processing_history' not in st.session_state:
-        st.session_state.processing_history = []
-    if 'efficiency_score' not in st.session_state:
-        st.session_state.efficiency_score = 0
 
-    # Inject custom CSS
-    inject_custom_css()
+    if 'bill_quantities' not in st.session_state:
+        st.session_state.bill_quantities = {}
 
-    # Display real-time performance dashboard
-    display_performance_dashboard()
+    if 'extra_items' not in st.session_state:
+        st.session_state.extra_items = []
 
-    # Sidebar with additional information and features
+    if 'generated_documents' not in st.session_state:
+        st.session_state.generated_documents = []
+
+def show_header():
+    """Display the application header"""
+    st.markdown("""
+    <div class="main-header">
+        <h1>📋 Enhanced Bill Generator</h1>
+        <p>Professional infrastructure billing with Excel upload and online entry capabilities</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+def show_progress_indicator(current_step: int, total_steps: int = 4):
+    """Show progress indicator for online mode"""
+    steps = ["Upload Work Order", "Fill Bill Quantities", "Add Extra Items", "Generate Documents"]
+
+    progress_html = '<div class="progress-container">'
+
+    for i, step_name in enumerate(steps[:total_steps], 1):
+        if i < current_step:
+            status = "completed"
+        elif i == current_step:
+            status = "current"
+        else:
+            status = ""
+
+        progress_html += f"""
+        <div class="progress-step {status}">
+            <div class="progress-circle {status}">
+                {"✓" if status == "completed" else str(i)}
+            </div>
+            <div class="progress-label">{step_name}</div>
+        </div>
+        """
+
+    progress_html += '</div>'
+    st.markdown(progress_html, unsafe_allow_html=True)
+
+def show_mode_selection():
+    """Display mode selection interface"""
+    st.markdown("## Choose Your Workflow")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("📁 Excel Upload Mode", key="excel_mode"):
+            st.session_state.mode = "excel"
+            st.session_state.step = 1
+            st.rerun()
+
+        st.markdown("""
+        <div class="mode-card">
+            <div style="font-size: 3rem; margin-bottom: 1rem; color: #667eea;">📁</div>
+            <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; color: #2c3e50;">Excel Upload Mode</div>
+            <div style="color: #7f8c8d; font-size: 0.9rem; line-height: 1.4;">
+                Upload a complete Excel file with Title Sheet, Work Order, 
+                and Bill Quantity data. Perfect for prepared datasets.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        if st.button("💻 Online Entry Mode", key="online_mode"):
+            st.session_state.mode = "online"
+            st.session_state.step = 1
+            st.rerun()
+
+        st.markdown("""
+        <div class="mode-card">
+            <div style="font-size: 3rem; margin-bottom: 1rem; color: #667eea;">💻</div>
+            <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; color: #2c3e50;">Online Entry Mode</div>
+            <div style="color: #7f8c8d; font-size: 0.9rem; line-height: 1.4;">
+                Enter bill quantities directly through web forms. 
+                Upload work order and fill quantities step by step.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Mode comparison
+    st.markdown("---")
+    st.markdown("### 📊 Mode Comparison")
+
+    comparison_df = pd.DataFrame({
+        "Feature": [
+            "Data Entry Method",
+            "Setup Time", 
+            "Flexibility",
+            "Best For",
+            "Technical Skill Required"
+        ],
+        "Excel Upload Mode": [
+            "Pre-prepared Excel files",
+            "Quick (if Excel ready)",
+            "Limited to Excel structure", 
+            "Bulk data, recurring bills",
+            "Excel knowledge"
+        ],
+        "Online Entry Mode": [
+            "Web forms and inputs",
+            "Medium (step-by-step)",
+            "High customization",
+            "One-time bills, custom items",
+            "Basic computer skills"
+        ]
+    })
+
+    st.dataframe(comparison_df, hide_index=True, use_container_width=True)
+
+def show_excel_mode():
+    """Handle Excel upload mode - existing functionality"""
+    st.markdown("## 📁 Excel Upload Mode")
+    show_progress_indicator(1, 3)
+
+    st.markdown("""
+    <div class="form-section">
+        <h3>📤 Upload Excel File</h3>
+        <p>Upload your Excel file containing Title Sheet, Work Order, and Bill Quantity data.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # File upload
+    uploaded_file = st.file_uploader(
+        "Choose Excel file", 
+        type=['xlsx', 'xls'],
+        help="Upload Excel file with required sheets: Title, Work Order, Bill Quantity"
+    )
+
+    if uploaded_file is not None:
+        try:
+            with st.spinner("Processing Excel file..."):
+                # Process Excel file using existing ExcelProcessor
+                processor = ExcelProcessor(uploaded_file)
+
+                # Process the Excel file directly
+                result = processor.process_excel()
+
+                if result and isinstance(result, dict):
+                    st.success("✅ Excel file processed successfully!")
+
+                    # Store processed data
+                    st.session_state.title_data = result.get('title_data')
+                    st.session_state.work_order_data = result.get('work_order_data')
+                    st.session_state.bill_quantity_data = result.get('bill_quantity_data')
+                    st.session_state.extra_items_data = result.get('extra_items_data', pd.DataFrame())
+
+                    # Show data preview
+                    show_data_preview(result)
+
+                    # Generate documents
+                    if st.button("🔄 Generate Documents", key="generate_excel"):
+                        generate_documents_excel_mode(result)
+
+
+        except Exception as e:
+            st.error(f"❌ Failed to process Excel file: {str(e)}")
+            logger.error(f"Excel processing error: {traceback.format_exc()}")
+
+def show_data_preview(data: Dict):
+    """Show preview of processed Excel data"""
+    st.markdown("### 📋 Data Preview")
+
+    # Title data preview
+    if data.get('title_data'):
+        with st.expander("📄 Title Information", expanded=True):
+            title_df = pd.DataFrame([data['title_data']])
+            st.dataframe(title_df, hide_index=True, use_container_width=True)
+
+    # Work order preview
+    work_order_data = data.get('work_order_data')
+    if work_order_data is not None and (isinstance(work_order_data, (list, dict)) or not work_order_data.empty if hasattr(work_order_data, 'empty') else True):
+        with st.expander("📋 Work Order Summary"):
+            if isinstance(work_order_data, pd.DataFrame):
+                work_order_df = work_order_data
+            else:
+                work_order_df = pd.DataFrame(work_order_data)
+            st.dataframe(work_order_df, hide_index=True, use_container_width=True)
+
+    # Bill quantity preview
+    bill_quantity_data = data.get('bill_quantity_data')
+    if bill_quantity_data is not None and (isinstance(bill_quantity_data, (list, dict)) or not bill_quantity_data.empty if hasattr(bill_quantity_data, 'empty') else True):
+        with st.expander("💰 Bill Quantities"):
+            if isinstance(bill_quantity_data, pd.DataFrame):
+                bill_df = bill_quantity_data
+            else:
+                bill_df = pd.DataFrame(bill_quantity_data)
+            st.dataframe(bill_df, hide_index=True, use_container_width=True)
+
+    # Extra items preview
+    extra_items_data = data.get('extra_items_data')
+    if extra_items_data is not None and (isinstance(extra_items_data, (list, dict)) or not extra_items_data.empty if hasattr(extra_items_data, 'empty') else True):
+        with st.expander("➕ Extra Items"):
+            if isinstance(extra_items_data, pd.DataFrame):
+                extra_df = extra_items_data
+            else:
+                extra_df = pd.DataFrame(extra_items_data)
+            st.dataframe(extra_df, hide_index=True, use_container_width=True)
+
+def generate_documents_excel_mode(data: Dict):
+    """Generate documents using processed Excel data"""
+    try:
+        with st.spinner("Generating documents..."):
+            # Initialize DocumentGenerator with data
+            doc_generator = DocumentGenerator(data)
+
+            # Generate HTML documents
+            html_documents = doc_generator.generate_all_documents()
+            
+            if html_documents:
+                st.success(f"✅ Generated {len(html_documents)} HTML documents!")
+                
+                # Convert HTML to PDF
+                with st.spinner("Converting to PDF..."):
+                    pdf_documents = doc_generator.create_pdf_documents(html_documents)
+                
+                if pdf_documents:
+                    st.success(f"✅ Successfully created {len(pdf_documents)} PDF documents!")
+                    
+                    # Save PDF files to temporary directory and collect file paths
+                    generated_files = []
+                    temp_dir = tempfile.mkdtemp()
+                    
+                    for filename, pdf_bytes in pdf_documents.items():
+                        file_path = os.path.join(temp_dir, filename)
+                        with open(file_path, 'wb') as f:
+                            f.write(pdf_bytes)
+                        generated_files.append(file_path)
+                    
+                    # Show individual download links
+                    st.markdown("### 📥 Individual Downloads")
+                    for i, file_path in enumerate(generated_files):
+                        file_name = Path(file_path).name
+                        provide_download_link(file_path, file_name, f"download_{i}")
+                    
+                    # Merge PDFs if multiple files
+                    if len(generated_files) > 1:
+                        try:
+                            merger = PDFMerger()
+                            merged_pdf_bytes = merger.merge_pdfs(pdf_documents)
+                            if merged_pdf_bytes:
+                                # Save merged PDF to temporary file
+                                merged_file_path = os.path.join(temp_dir, "Merged_Bill_Documents.pdf")
+                                with open(merged_file_path, 'wb') as f:
+                                    f.write(merged_pdf_bytes)
+                                st.success("📄 Documents merged successfully!")
+                                provide_download_link(merged_file_path, "Merged_Bill_Documents.pdf", "merged_download")
+                        except Exception as e:
+                            st.warning(f"Could not merge PDFs: {str(e)}")
+                            st.info("Individual downloads are still available above.")
+                else:
+                    st.error("❌ Failed to create PDF documents")
+            else:
+                st.error("❌ Failed to generate documents")
+
+    except Exception as e:
+        st.error(f"❌ Error generating documents: {str(e)}")
+        logger.error(f"Document generation error: {traceback.format_exc()}")
+
+def show_online_mode():
+    """Handle online entry mode with step-by-step workflow"""
+    st.markdown("## 💻 Online Entry Mode")
+
+    # Show progress
+    show_progress_indicator(st.session_state.step)
+
+    if st.session_state.step == 1:
+        show_work_order_upload()
+    elif st.session_state.step == 2:
+        show_bill_quantity_entry()
+    elif st.session_state.step == 3:
+        show_extra_items_entry()
+    elif st.session_state.step == 4:
+        show_document_generation()
+
+def show_work_order_upload():
+    """Step 1: Upload work order and title information"""
+    st.markdown("""
+    <div class="form-section">
+        <h3>📤 Step 1: Upload Work Order</h3>
+        <p>Upload your work order Excel file or enter title information manually.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Option to upload work order or enter manually
+    entry_method = st.radio(
+        "Choose data entry method:",
+        ["Upload Excel File", "Enter Manually"],
+        horizontal=True
+    )
+
+    if entry_method == "Upload Excel File":
+        uploaded_file = st.file_uploader(
+            "Upload Work Order Excel File",
+            type=['xlsx', 'xls'],
+            help="Excel file containing Title sheet and Work Order data"
+        )
+
+        if uploaded_file is not None:
+            try:
+                with st.spinner("Processing work order..."):
+                    processor = ExcelProcessor(uploaded_file)
+
+                    # Process only title and work order sheets
+                    result = processor.process_excel()
+
+                    if result and isinstance(result, dict):
+                        st.success("✅ Work order processed successfully!")
+
+                        # Store data
+                        st.session_state.title_data = result.get('title_data')
+                        st.session_state.work_order_data = result.get('work_order_data')
+
+                        # Show preview
+                        show_work_order_preview()
+
+                        # Next step button
+                        if st.button("➡️ Proceed to Bill Quantities", key="next_to_bill"):
+                            st.session_state.step = 2
+                            st.rerun()
+
+
+            except Exception as e:
+                st.error(f"❌ Failed to process file: {str(e)}")
+
+    else:  # Manual entry
+        show_manual_title_entry()
+
+def show_manual_title_entry():
+    """Manual entry form for title and work order information"""
+    st.markdown("### ✏️ Manual Entry")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("#### 📄 Title Information")
+
+        title_data = {
+            'project_name': st.text_input("Project Name", key="manual_project"),
+            'contract_number': st.text_input("Contract Number", key="manual_contract"),
+            'contractor_name': st.text_input("Contractor Name", key="manual_contractor"),
+            'work_order': st.text_input("Work Order", key="manual_wo"),
+            'bill_number': st.text_input("Bill Number", key="manual_bill_no"),
+            'period_from': st.date_input("Period From", key="manual_from"),
+            'period_to': st.date_input("Period To", key="manual_to")
+        }
+
+    with col2:
+        st.markdown("#### 📋 Work Items")
+
+        # Dynamic work items entry
+        if 'work_items' not in st.session_state:
+            st.session_state.work_items = [{"item_description": "", "unit": "", "rate": 0.0}]
+
+        work_items = []
+        for i, item in enumerate(st.session_state.work_items):
+            st.markdown(f"**Item {i+1}:**")
+            col_desc, col_unit, col_rate = st.columns([3, 1, 1])
+
+            with col_desc:
+                description = st.text_input("Description", value=item["item_description"], key=f"desc_{i}")
+            with col_unit:
+                unit = st.text_input("Unit", value=item["unit"], key=f"unit_{i}")
+            with col_rate:
+                rate = st.number_input("Rate", value=item["rate"], min_value=0.0, key=f"rate_{i}")
+
+            work_items.append({
+                "item_description": description,
+                "unit": unit,
+                "rate": rate
+            })
+
+        # Add/Remove buttons
+        col_add, col_remove = st.columns(2)
+        with col_add:
+            if st.button("➕ Add Item"):
+                st.session_state.work_items.append({"item_description": "", "unit": "", "rate": 0.0})
+                st.rerun()
+
+        with col_remove:
+            if len(st.session_state.work_items) > 1 and st.button("➖ Remove Item"):
+                st.session_state.work_items.pop()
+                st.rerun()
+
+    # Validate and proceed
+    if st.button("💾 Save and Continue", key="save_manual"):
+        # Validate required fields
+        if not title_data['project_name'] or not title_data['work_order']:
+            st.error("⚠️ Please fill in at least Project Name and Work Order")
+            return
+
+        # Store data
+        st.session_state.title_data = title_data
+        st.session_state.work_order_data = [item for item in work_items if item['item_description']]
+
+        st.success("✅ Data saved successfully!")
+
+        # Show preview
+        show_work_order_preview()
+
+        # Next step
+        if st.button("➡️ Proceed to Bill Quantities", key="next_manual"):
+            st.session_state.step = 2
+            st.rerun()
+
+def show_work_order_preview():
+    """Show preview of work order data"""
+    st.markdown("### 📋 Preview")
+
+    if st.session_state.title_data:
+        with st.expander("📄 Title Information", expanded=True):
+            title_df = pd.DataFrame([st.session_state.title_data])
+            st.dataframe(title_df, hide_index=True, use_container_width=True)
+
+    if st.session_state.work_order_data:
+        with st.expander("📋 Work Items", expanded=True):
+            work_df = pd.DataFrame(st.session_state.work_order_data)
+            st.dataframe(work_df, hide_index=True, use_container_width=True)
+
+def show_bill_quantity_entry():
+    """Step 2: Enter bill quantities for work items"""
+    st.markdown("""
+    <div class="form-section">
+        <h3>💰 Step 2: Enter Bill Quantities</h3>
+        <p>Enter quantities for each work item in your order.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if not st.session_state.work_order_data:
+        st.error("⚠️ No work order data found. Please complete Step 1 first.")
+        if st.button("⬅️ Go Back to Step 1"):
+            st.session_state.step = 1
+            st.rerun()
+        return
+
+    # Initialize quantities if not exists
+    if 'quantities' not in st.session_state:
+        st.session_state.quantities = {}
+
+    # Bill quantity entry form
+    st.markdown("### 📊 Enter Quantities")
+
+    total_amount = 0.0
+    bill_data = []
+
+    for i, item in enumerate(st.session_state.work_order_data):
+        st.markdown(f"#### Item {i+1}: {item.get('item_description', 'Unknown Item')}")
+
+        col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+
+        with col1:
+            st.markdown(f"**Description:** {item.get('item_description', 'N/A')}")
+
+        with col2:
+            st.markdown(f"**Unit:** {item.get('unit', 'N/A')}")
+
+        with col3:
+            st.markdown(f"**Rate:** ₹{item.get('rate', 0):,.2f}")
+
+        with col4:
+            quantity_key = f"qty_{i}"
+            quantity = st.number_input(
+                "Quantity",
+                min_value=0.0,
+                value=st.session_state.quantities.get(quantity_key, 0.0),
+                step=0.01,
+                key=quantity_key,
+                help=f"Enter quantity for {item.get('item_description', 'item')}"
+            )
+            st.session_state.quantities[quantity_key] = quantity
+
+        # Calculate amount
+        rate = item.get('rate', 0)
+        amount = quantity * rate
+        total_amount += amount
+
+        # Add to bill data
+        bill_data.append({
+            'item_description': item.get('item_description'),
+            'unit': item.get('unit'),
+            'rate': rate,
+            'quantity': quantity,
+            'amount': amount
+        })
+
+        # Show amount for this item
+        if quantity > 0:
+            st.markdown(f"💰 **Amount:** ₹{amount:,.2f}")
+
+        st.markdown("---")
+
+    # Summary
+    st.markdown("### 📈 Bill Summary")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        total_items = len([item for item in bill_data if item['quantity'] > 0])
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{total_items}</div>
+            <div class="metric-label">Items with Quantities</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        total_qty = sum(item['quantity'] for item in bill_data)
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{total_qty:,.2f}</div>
+            <div class="metric-label">Total Quantity</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">₹{total_amount:,.2f}</div>
+            <div class="metric-label">Total Amount</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Store bill quantities
+    st.session_state.bill_quantities = bill_data
+
+    # Show detailed table
+    if total_amount > 0:
+        st.markdown("### 📋 Detailed Bill")
+        bill_df = pd.DataFrame(bill_data)
+        bill_df = bill_df[bill_df['quantity'] > 0]  # Show only items with quantities
+
+        # Format the dataframe for display
+        if len(bill_df) > 0:
+            display_df = bill_df.copy()
+            display_df['rate'] = display_df['rate'].apply(lambda x: f"₹{x:,.2f}")
+            display_df['amount'] = display_df['amount'].apply(lambda x: f"₹{x:,.2f}")
+            display_df['quantity'] = display_df['quantity'].apply(lambda x: f"{x:,.2f}")
+
+            st.dataframe(display_df, hide_index=True, use_container_width=True)
+
+    # Navigation buttons
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("⬅️ Back to Work Order"):
+            st.session_state.step = 1
+            st.rerun()
+
+    with col2:
+        if total_amount > 0:
+            if st.button("➡️ Proceed to Extra Items"):
+                st.session_state.step = 3
+                st.rerun()
+        else:
+            st.warning("⚠️ Please enter quantities for at least one item to proceed")
+
+def show_extra_items_entry():
+    """Step 3: Add extra items (optional)"""
+    st.markdown("""
+    <div class="form-section">
+        <h3>➕ Step 3: Add Extra Items (Optional)</h3>
+        <p>Add any additional items not included in the work order.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Initialize extra items if not exists
+    if 'extra_items_list' not in st.session_state:
+        st.session_state.extra_items_list = []
+
+    # Extra items entry form
+    st.markdown("### ➕ Add Extra Items")
+
+    with st.expander("Add New Extra Item", expanded=len(st.session_state.extra_items_list) == 0):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            extra_description = st.text_input("Item Description", key="extra_desc")
+            extra_unit = st.text_input("Unit", key="extra_unit")
+
+        with col2:
+            extra_rate = st.number_input("Rate (₹)", min_value=0.0, key="extra_rate")
+            extra_quantity = st.number_input("Quantity", min_value=0.0, key="extra_qty")
+
+        if st.button("➕ Add Extra Item"):
+            if extra_description and extra_quantity > 0:
+                extra_item = {
+                    'description': extra_description,
+                    'unit': extra_unit,
+                    'rate': extra_rate,
+                    'quantity': extra_quantity,
+                    'amount': extra_rate * extra_quantity
+                }
+                st.session_state.extra_items_list.append(extra_item)
+                st.success(f"✅ Added: {extra_description}")
+                st.rerun()
+            else:
+                st.error("⚠️ Please provide description and quantity")
+
+    # Show current extra items
+    if st.session_state.extra_items_list:
+        st.markdown("### 📋 Current Extra Items")
+
+        extra_df = pd.DataFrame(st.session_state.extra_items_list)
+
+        # Format for display
+        display_df = extra_df.copy()
+        display_df['rate'] = display_df['rate'].apply(lambda x: f"₹{x:,.2f}")
+        display_df['amount'] = display_df['amount'].apply(lambda x: f"₹{x:,.2f}")
+        display_df['quantity'] = display_df['quantity'].apply(lambda x: f"{x:,.2f}")
+
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
+
+        # Remove item functionality
+        if len(st.session_state.extra_items_list) > 0:
+            item_to_remove = st.selectbox(
+                "Remove Item:",
+                options=range(len(st.session_state.extra_items_list)),
+                format_func=lambda x: st.session_state.extra_items_list[x]['description']
+            )
+
+            if st.button("🗑️ Remove Selected Item"):
+                st.session_state.extra_items_list.pop(item_to_remove)
+                st.success("Item removed!")
+                st.rerun()
+
+        # Extra items summary
+        total_extra_amount = sum(item['amount'] for item in st.session_state.extra_items_list)
+        st.markdown(f"**Total Extra Items Amount: ₹{total_extra_amount:,.2f}**")
+
+    # Store extra items data
+    st.session_state.extra_items = st.session_state.extra_items_list
+
+    # Navigation
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("⬅️ Back to Bill Quantities"):
+            st.session_state.step = 2
+            st.rerun()
+
+    with col2:
+        if st.button("➡️ Generate Documents"):
+            st.session_state.step = 4
+            st.rerun()
+
+def show_document_generation():
+    """Step 4: Generate and download documents"""
+    st.markdown("""
+    <div class="form-section">
+        <h3>📄 Step 4: Generate Documents</h3>
+        <p>Review your data and generate the bill documents.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Final summary
+    st.markdown("### 📊 Final Summary")
+
+    # Calculate totals
+    bill_total = sum(item.get('amount', 0) for item in st.session_state.bill_quantities if item.get('quantity', 0) > 0)
+    extra_total = sum(item.get('amount', 0) for item in st.session_state.extra_items)
+    grand_total = bill_total + extra_total
+
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{len([item for item in st.session_state.bill_quantities if item.get('quantity', 0) > 0])}</div>
+            <div class="metric-label">Bill Items</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{len(st.session_state.extra_items)}</div>
+            <div class="metric-label">Extra Items</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">₹{bill_total:,.2f}</div>
+            <div class="metric-label">Bill Amount</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">₹{grand_total:,.2f}</div>
+            <div class="metric-label">Grand Total</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Data preview tabs
+    tab1, tab2, tab3 = st.tabs(["📄 Title Info", "💰 Bill Items", "➕ Extra Items"])
+
+    with tab1:
+        if st.session_state.title_data:
+            title_df = pd.DataFrame([st.session_state.title_data])
+            st.dataframe(title_df, hide_index=True, use_container_width=True)
+
+    with tab2:
+        bill_items = [item for item in st.session_state.bill_quantities if item.get('quantity', 0) > 0]
+        if bill_items:
+            bill_df = pd.DataFrame(bill_items)
+            st.dataframe(bill_df, hide_index=True, use_container_width=True)
+
+    with tab3:
+        if st.session_state.extra_items:
+            extra_df = pd.DataFrame(st.session_state.extra_items)
+            st.dataframe(extra_df, hide_index=True, use_container_width=True)
+
+    # Document generation
+    st.markdown("### 🔄 Generate Documents")
+
+    if st.button("📄 Generate All Documents", type="primary"):
+        generate_documents_online_mode()
+
+    # Navigation
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("⬅️ Back to Extra Items"):
+            st.session_state.step = 3
+            st.rerun()
+
+    with col2:
+        if st.button("🔄 Start New Bill"):
+            # Reset session state
+            for key in ['mode', 'step', 'work_order_data', 'title_data', 'bill_quantities', 'extra_items']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+
+def generate_documents_online_mode():
+    """Generate documents using online mode data"""
+    try:
+        with st.spinner("Generating documents..."):
+            # Prepare data in the format expected by DocumentGenerator
+
+            # Filter bill quantities to include only items with quantities > 0
+            bill_quantity_data = [
+                item for item in st.session_state.bill_quantities 
+                if item.get('quantity', 0) > 0
+            ]
+
+            # Prepare data in DocumentGenerator format
+            online_data = {
+                'title_data': st.session_state.title_data,
+                'work_order_data': st.session_state.work_order_data,
+                'bill_quantity_data': bill_quantity_data,
+                'extra_items_data': st.session_state.extra_items
+            }
+            
+            # Initialize DocumentGenerator
+            doc_generator = DocumentGenerator(online_data)
+
+            # Generate HTML documents
+            html_documents = doc_generator.generate_all_documents()
+            
+            if html_documents:
+                st.success(f"✅ Generated {len(html_documents)} HTML documents!")
+                
+                # Convert HTML to PDF
+                with st.spinner("Converting to PDF..."):
+                    pdf_documents = doc_generator.create_pdf_documents(html_documents)
+                
+                if pdf_documents:
+                    st.success(f"✅ Successfully created {len(pdf_documents)} PDF documents!")
+                    
+                    # Save PDF files to temporary directory and collect file paths
+                    generated_files = []
+                    temp_dir = tempfile.mkdtemp()
+                    
+                    for filename, pdf_bytes in pdf_documents.items():
+                        file_path = os.path.join(temp_dir, filename)
+                        with open(file_path, 'wb') as f:
+                            f.write(pdf_bytes)
+                        generated_files.append(file_path)
+                    
+                    # Store generated files
+                    st.session_state.generated_documents = generated_files
+
+                    # Show individual download links
+                    st.markdown("### 📥 Individual Downloads")
+                    for i, file_path in enumerate(generated_files):
+                        file_name = Path(file_path).name
+                        provide_download_link(file_path, file_name, f"online_download_{i}")
+                    
+                    # Merge PDFs if multiple files
+                    if len(generated_files) > 1:
+                        try:
+                            merger = PDFMerger()
+                            merged_pdf_bytes = merger.merge_pdfs(pdf_documents)
+                            if merged_pdf_bytes:
+                                # Save merged PDF to temporary file
+                                merged_file_path = os.path.join(temp_dir, "Merged_Bill_Documents.pdf")
+                                with open(merged_file_path, 'wb') as f:
+                                    f.write(merged_pdf_bytes)
+                                st.success("📄 Documents merged successfully!")
+                                provide_download_link(merged_file_path, "Merged_Bill_Documents.pdf", "online_merged")
+                        except Exception as e:
+                            st.warning(f"Could not merge PDFs: {str(e)}")
+                            st.info("Individual downloads are still available above.")
+                    else:
+                        provide_download_link(generated_files[0], "Bill_Document.pdf", "online_single")
+
+                    # Success message with summary
+                    total_amount = sum(item.get('amount', 0) for item in bill_quantity_data) + sum(item.get('amount', 0) for item in st.session_state.extra_items)
+
+                    st.balloons()
+                    st.success(f"""
+                    🎉 **Documents Generated Successfully!**
+
+                    - **Total Items:** {len(bill_quantity_data) + len(st.session_state.extra_items)}
+                    - **Total Amount:** ₹{total_amount:,.2f}
+                    - **Generated Files:** {len(generated_files)}
+                    """)
+                else:
+                    st.error("❌ Failed to create PDF documents")
+            else:
+                st.error("❌ Failed to generate documents")
+
+    except Exception as e:
+        st.error(f"❌ Error generating documents: {str(e)}")
+        logger.error(f"Online document generation error: {traceback.format_exc()}")
+
+def provide_download_link(file_path: str, file_name: str, key: str = None):
+    """Provide download link for generated file"""
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as file:
+                file_data = file.read()
+
+            st.download_button(
+                label=f"📥 Download {file_name}",
+                data=file_data,
+                file_name=file_name,
+                mime="application/pdf" if file_name.endswith('.pdf') else "application/octet-stream",
+                key=key
+            )
+        else:
+            st.error(f"File not found: {file_name}")
+
+    except Exception as e:
+        st.error(f"Error providing download for {file_name}: {str(e)}")
+
+def show_sidebar():
+    """Show sidebar with application information and controls"""
     with st.sidebar:
-        st.markdown("### 🛠️ System Information")
-        st.markdown("""
-        **Version:** 3.0 OPTIMIZED  
-        **Last Updated:** September 2025  
-        **Status:** ✅ Active & Enhanced  
-        """)
+        st.markdown("## 🔧 Application Controls")
 
-        st.markdown("### 📊 Supported Formats")
-        st.markdown("""
-        **Input:** Excel (.xlsx, .xls)  
-        **Output:** PDF, Word, HTML, ZIP  
-        """)
+        # Mode indicator
+        if st.session_state.mode:
+            mode_name = "Excel Upload" if st.session_state.mode == "excel" else "Online Entry"
+            st.info(f"**Current Mode:** {mode_name}")
 
-        st.markdown("### 🏛️ Document Types")
-        st.markdown("""
-        - First Page Summary  
-        - Deviation Statement  
-        - Final Bill Scrutiny Sheet  
-        - Extra Items Statement  
-        - Certificate II & III  
-        """)
+            if st.session_state.mode == "online":
+                st.info(f"**Current Step:** {st.session_state.step}/4")
 
-        st.markdown("### 🎯 Enhanced Features")
+        # Reset button
+        if st.button("🔄 Reset Application"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+
+        st.markdown("---")
+
+        # Application info
         st.markdown("""
-        - **Performance Monitoring**  
-        - **Memory Optimization**  
-        - **Real-time Metrics**  
-        - **Professional formatting**  
-        - **Statutory compliance**  
-        - **A4 specifications**  
-        - **Automatic calculations**  
-        - **Multi-format output**  
+        ## 📋 About This App
+
+        **Enhanced Bill Generator** provides two modes for creating infrastructure billing documents:
+
+        ### 📁 Excel Upload Mode
+        - Upload complete Excel files
+        - Automatic data processing
+        - Quick generation for prepared data
+
+        ### 💻 Online Entry Mode  
+        - Step-by-step web forms
+        - Real-time calculations
+        - Custom item additions
+
+        ### 🔧 Features
+        - Professional PDF generation
+        - Multiple document types
+        - Data validation
+        - Mobile responsive design
         """)
 
         st.markdown("---")
-        st.markdown("### 💡 Tips")
-        st.markdown("""
-        - Ensure all required sheets exist  
-        - Check data format consistency  
-        - Verify numerical values  
-        - Review generated documents  
-        - Monitor performance metrics  
-        """)
 
-    # Header section with enhanced animations
-    st.markdown("""
-    <div class="header-container">
-        <div class="balloon-container">
-            <div class="balloon balloon1">🎈</div>
-            <div class="balloon balloon2">🎈</div>
-            <div class="balloon balloon3">🎈</div>
-        </div>
-        <h1 class="header-title">🏗️ Infrastructure Billing System</h1>
-        <p class="header-subtitle">Generate professional billing documents from Excel files automatically</p>
-        <p class="header-professional">Streamlined infrastructure documentation with statutory compliance and automated calculations</p>
-        <p class="header-initiative">An Initiative by Mrs. Premlata Jain, Additional Administrative Officer, PWD, Udaipur</p>
-    </div>
-    """, unsafe_allow_html=True)
+        # Performance metrics (if available)
+        if hasattr(st.session_state, 'generated_documents'):
+            st.markdown("## 📊 Session Stats")
+            st.metric("Documents Generated", len(st.session_state.generated_documents))
 
-    # Create columns for layout
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        st.markdown("""
-        <div class="upload-card">
-            <h3 style="color: #007bff; margin-bottom: 1rem;">📁 Upload Excel File</h3>
-            <p style="color: #666; margin-bottom: 1.5rem;">
-                Upload your Excel file containing Title, Work Order, Bill Quantity, and Extra Items sheets
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        uploaded_file = st.file_uploader(
-            "Choose Excel file",
-            type=['xlsx', 'xls'],
-            help="Select an Excel file with the required sheets: Title, Work Order, Bill Quantity, Extra Items (optional)"
-        )
-
-    with col2:
-        st.markdown("""
-        <div class="info-card">
-            <h4 style="color: #495057; margin-bottom: 1rem;">📋 File Requirements</h4>
-            <div class="feature-list">
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span><strong>Title Sheet:</strong> Contains all metadata</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span><strong>Work Order:</strong> Original work items</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span><strong>Bill Quantity:</strong> Actual measurements</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span><strong>Extra Items:</strong> Additional work (optional)</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="info-card">
-            <h4 style="color: #495057; margin-bottom: 1rem;">📄 Output Formats</h4>
-            <div class="feature-list">
-                <div class="feature-item">
-                    <span class="feature-icon">📄</span>
-                    <span>Individual PDF, Word, HTML</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">📑</span>
-                    <span>Combined PDF document</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">🗂️</span>
-                    <span>Complete ZIP package</span>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    if uploaded_file is not None:
-        # Enforce upload size limit (10 MB) to prevent performance / DoS issues
-        try:
-            size_bytes = getattr(uploaded_file, 'size', None)
-            if size_bytes is None:
-                size_bytes = len(uploaded_file.getbuffer())
-            size_mb = size_bytes / (1024 * 1024)
-            if size_mb > 10:
-                st.error(f"File is too large ({size_mb:.2f} MB). Please upload a file under 10 MB.")
-                return
-        except Exception:
-            pass
-        
-        try:
-            # Show processing status with enhanced styling
+        # Help section
+        with st.expander("❓ Need Help?"):
             st.markdown("""
-            <div class="progress-container">
-                <h4 style="color: #495057; margin-bottom: 1rem;">🔄 Processing Your File</h4>
-                <p style="color: #666; margin-bottom: 1.5rem;">Please wait while we process your Excel file and generate all documents...</p>
-            </div>
-            """, unsafe_allow_html=True)
+            **Excel Mode Requirements:**
+            - Title sheet with project info
+            - Work Order sheet with items
+            - Bill Quantity sheet (optional)
 
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            start_time = datetime.now()
+            **Online Mode Steps:**
+            1. Upload work order or enter manually
+            2. Fill bill quantities for each item
+            3. Add extra items (optional)
+            4. Generate and download documents
 
-            # Process the Excel file with enhanced status
-            status_text.markdown("**Step 1/5:** 📊 Analyzing Excel file structure...")
-            progress_bar.progress(10)
+            **Supported Formats:**
+            - Input: Excel (.xlsx, .xls)
+            - Output: PDF documents
+            """)
 
-            processor = ExcelProcessor(uploaded_file)
-            data = processor.process_excel()
-            
-            # Debug: Check if data was extracted
-            st.write("🔍 Debug Info:")
-            st.write(f"Title data items: {len(data.get('title_data', {}))}")
-            st.write(f"Work Order rows: {len(data.get('work_order_data', []))}")
-            st.write(f"Bill Quantity rows: {len(data.get('bill_quantity_data', []))}")
-            st.write(f"Extra Items rows: {len(data.get('extra_items_data', []))}")
-            
-            progress_bar.progress(30)
+def main():
+    """Main application function"""
+    # Load custom CSS
+    load_custom_css()
 
-            status_text.markdown("**Step 2/5:** 📝 Generating professional documents...")
+    # Initialize session state
+    initialize_session_state()
 
-            # Generate documents
-            generator = DocumentGenerator(data)
-            documents = generator.generate_all_documents()
-            
-            # Debug: Check if documents were generated
-            st.write("📝 Document Generation Debug:")
-            for doc_name, doc_content in documents.items():
-                content_length = len(doc_content) if doc_content else 0
-                st.write(f"  {doc_name}: {content_length} characters")
-                if content_length == 0:
-                    st.error(f"⚠️ {doc_name} is empty!")
-            
-            progress_bar.progress(60)
+    # Show header
+    show_header()
 
-            status_text.markdown("**Step 3/5:** 📄 Converting to PDF format...")
-            st.write("🔄 Starting PDF conversion process...")
+    # Show sidebar
+    show_sidebar()
 
-            # Create individual PDFs with progress tracking
-            try:
-                pdf_files = generator.create_pdf_documents(documents)
-                st.write(f"✅ PDF conversion completed! Generated {len(pdf_files)} PDF files.")
-                
-                # Debug: Check PDF file sizes
-                for pdf_name, pdf_content in pdf_files.items():
-                    pdf_size = len(pdf_content) if pdf_content else 0
-                    st.write(f"  📄 {pdf_name}: {pdf_size} bytes")
-                    if pdf_size == 0 or b"PDF generation failed" in pdf_content:
-                        st.warning(f"⚠️ PDF generation issue with {pdf_name}")
-                        
-            except Exception as pdf_error:
-                st.error(f"❌ PDF conversion failed: {str(pdf_error)}")
-                # Continue with empty PDF files to prevent complete failure
-                pdf_files = {f"{doc_name}.pdf": f"PDF generation failed: {str(pdf_error)}".encode() 
-                           for doc_name in documents.keys()}
-            
-            progress_bar.progress(80)
+    # Main content area
+    if st.session_state.mode is None:
+        show_mode_selection()
+    elif st.session_state.mode == "excel":
+        show_excel_mode()
+    elif st.session_state.mode == "online":
+        show_online_mode()
 
-            status_text.markdown("**Step 4/5:** 📑 Combining all documents...")
+# Error handling wrapper
+def run_app():
+    """Run the application with error handling"""
+    try:
+        main()
+    except Exception as e:
+        st.error(f"❌ Application Error: {str(e)}")
+        logger.error(f"Application error: {traceback.format_exc()}")
 
-            # Merge PDFs
-            merger = PDFMerger()
-            merged_pdf = merger.merge_pdfs(pdf_files)
-            progress_bar.progress(90)
-
-            status_text.markdown("**Step 5/5:** 📦 Creating download package...")
-
-            # Package everything
-            packager = ZipPackager()
-            zip_buffer = packager.create_package(documents, pdf_files, merged_pdf)
-            progress_bar.progress(100)
-            
-            # Memory cleanup
-            del documents, pdf_files
-            gc.collect()
-
-            end_time = datetime.now()
-            processing_time = (end_time - start_time).total_seconds()
-            
-            # Calculate efficiency score
-            items_count = len(data.get('work_order_data', []))
-            file_size = size_bytes
-            efficiency_score = calculate_efficiency_score(processing_time, items_count, file_size)
-            
-            # Update session state
-            st.session_state.efficiency_score = efficiency_score
-            st.session_state.processing_complete = True
-            
-            # Update processing history
-            processing_record = {
-                'timestamp': datetime.now().isoformat(),
-                'processing_time': processing_time,
-                'items_count': items_count,
-                'file_size': file_size,
-                'efficiency_score': efficiency_score
-            }
-            st.session_state.processing_history.append(processing_record)
-            
-            status_text.markdown(f"**✅ Processing complete in {processing_time:.1f} seconds!**")
-
-            # Display results with enhanced styling and metrics
-            st.balloons()  # Celebration animation
-            
-            st.markdown("""
-            <div class="status-success">
-                <h4 style="margin-bottom: 0.5rem;">🎉 Success! All documents generated perfectly!</h4>
-                <p style="margin: 0;">Your professional billing documents are ready for download.</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Show metrics in an attractive way
-            col_metrics1, col_metrics2, col_metrics3, col_metrics4 = st.columns(4)
-            
-            with col_metrics1:
-                st.metric(
-                    label="📄 Documents Created", 
-                    value=len(documents),
-                    help="Individual billing documents generated"
-                )
-            
-            with col_metrics2:
-                total_data_rows = len(data.get('work_order_data', []))
-                st.metric(
-                    label="📊 Data Rows Processed", 
-                    value=total_data_rows,
-                    help="Work order items processed"
-                )
-            
-            with col_metrics3:
-                st.metric(
-                    label="📁 Output Formats", 
-                    value="3",
-                    delta="PDF, Word, HTML",
-                    help="Multiple format outputs available"
-                )
-            
-            with col_metrics4:
-                file_size_mb = round(len(zip_buffer.getvalue()) / (1024 * 1024), 2)
-                st.metric(
-                    label="💾 Package Size", 
-                    value=f"{file_size_mb} MB",
-                    help="Total size of download package"
-                )
-
-            # Enhanced document summary with tabs
-            st.markdown("### 📋 Generated Documents Overview")
-            
-            tab1, tab2, tab3 = st.tabs(["📄 Documents", "📊 Data Summary", "📥 Download"])
-            
-            with tab1:
-                for i, doc_name in enumerate(documents.keys(), 1):
-                    st.markdown(f"""
-                    <div style="padding: 1rem; margin: 0.5rem 0; background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; border-left: 4px solid #28a745;">
-                        <strong>{i}. {doc_name}</strong>
-                        <div style="color: #666; font-size: 0.9rem; margin-top: 0.3rem;">
-                            Ready in PDF, Word, and HTML formats
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            with tab2:
-                col_summary1, col_summary2 = st.columns(2)
-                
-                with col_summary1:
-                    if 'title_data' in data:
-                        st.markdown("#### 🏷️ Project Information")
-                        key_info = {
-                            'Project Name': data['title_data'].get('Project Name', 'N/A'),
-                            'Contract No': data['title_data'].get('Contract No', 'N/A'),
-                            'Work Order No': data['title_data'].get('Work Order No', 'N/A')
-                        }
-                        for key, value in key_info.items():
-                            st.markdown(f"**{key}:** {value}")
-                
-                with col_summary2:
-                    st.markdown("#### 📈 Processing Summary")
-                    st.markdown(f"**Work Order Items:** {len(data.get('work_order_data', []))}")
-                    st.markdown(f"**Bill Quantity Items:** {len(data.get('bill_quantity_data', []))}")
-                    if not data.get('extra_items_data', pd.DataFrame()).empty:
-                        st.markdown(f"**Extra Items:** {len(data.get('extra_items_data', []))}")
-                    else:
-                        st.markdown("**Extra Items:** None")
-            
-            with tab3:
-                st.markdown("#### 📦 What's in your download package:")
-                
-                package_contents = [
-                    "📁 **HTML Folder** - Web viewable documents",
-                    "📄 **PDF Folder** - Print-ready individual files", 
-                    "📑 **Word Folder** - Editable document versions",
-                    "📋 **Combined PDF** - All documents in one file"
-                ]
-                
-                for content in package_contents:
-                    st.markdown(f"• {content}")
-                
-                st.info("💡 All documents follow government standards and are ready for official submission.")
-
-            # Enhanced download section
-            st.markdown("---")
-            
-            download_col1, download_col2 = st.columns([2, 1])
-            
-            with download_col1:
-                st.markdown("""
-                <div class="download-section">
-                    <h3 style="color: #155724; margin-bottom: 1rem;">🎉 Ready for Download!</h3>
-                    <p style="color: #155724; margin-bottom: 1.5rem;">
-                        Your professional billing package is complete and ready. Contains all documents in multiple formats for immediate use.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # Smart filename generation
-                project_name = data.get('title_data', {}).get('Project Name', 'Project')
-                clean_project_name = "".join(c for c in project_name if c.isalnum() or c in (' ', '-', '_')).rstrip()[:20]
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f"{clean_project_name}_BillingDocs_{timestamp}.zip"
-
-                # Download button with enhanced styling
-                st.download_button(
-                    label="📥 Download Complete Package",
-                    data=zip_buffer.getvalue(),
-                    file_name=filename,
-                    mime="application/zip",
-                    use_container_width=True,
-                    help=f"Downloads: {filename}"
-                )
-
-                # Direct combined PDF download
-                combined_pdf_name = f"{clean_project_name}_All_Documents_{timestamp}.pdf"
-                st.download_button(
-                    label="📑 Download Combined PDF",
-                    data=merged_pdf,
-                    file_name=combined_pdf_name,
-                    mime="application/pdf",
-                    use_container_width=True,
-                    help=f"Downloads: {combined_pdf_name}"
-                )
-                
-                # Additional download info
-                st.success(f"✅ Package ready: **{filename}** ({file_size_mb} MB)")
-            
-            with download_col2:
-                st.markdown("""
-                <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 2rem; border-radius: 15px; text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🏆</div>
-                    <h4 style="color: #2e7d32; margin-bottom: 1rem;">Professional Quality</h4>
-                    <p style="color: #388e3c; margin: 0; font-size: 0.9rem;">
-                        Government-standard documents ready for official submission
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Show data preview with enhanced styling
-            with st.expander("📊 Data Preview & Verification"):
-                st.markdown("### 📋 Extracted Data Summary")
-
-                # Title data
-                if 'title_data' in data:
-                    st.markdown("#### 🏷️ Title Sheet Data")
-                    # Convert title_data dict to dataframe for better display
-                    title_df = pd.DataFrame(list(data['title_data'].items()), columns=['Field', 'Value'])
-                    st.dataframe(title_df, use_container_width=True)
-
-                # Work order data
-                if 'work_order_data' in data:
-                    st.markdown("#### 📋 Work Order Summary")
-                    st.dataframe(data['work_order_data'].head(10), use_container_width=True)
-                    if len(data['work_order_data']) > 10:
-                        st.info(f"Showing first 10 rows of {len(data['work_order_data'])} total work order items")
-
-                # Bill quantity data
-                if 'bill_quantity_data' in data:
-                    st.markdown("#### 📊 Bill Quantity Summary")
-                    st.dataframe(data['bill_quantity_data'].head(10), use_container_width=True)
-                    if len(data['bill_quantity_data']) > 10:
-                        st.info(f"Showing first 10 rows of {len(data['bill_quantity_data'])} total bill quantity items")
-
-                # Extra items data
-                if 'extra_items_data' in data and not data['extra_items_data'].empty:
-                    st.markdown("#### ➕ Extra Items Summary")
-                    st.dataframe(data['extra_items_data'].head(10), use_container_width=True)
-                    if len(data['extra_items_data']) > 10:
-                        st.info(f"Showing first 10 rows of {len(data['extra_items_data'])} total extra items")
-
-        except Exception as e:
-            error_msg = str(e)
-            
-            # Provide specific error guidance
-            if "No such file or directory" in error_msg or "sheet_name" in error_msg:
-                st.markdown("""
-                <div class="status-error">
-                    <h4 style="margin-bottom: 0.5rem;">❌ Missing Required Sheets</h4>
-                    <p style="margin: 0;">Your Excel file is missing required sheets. Please ensure your file contains:</p>
-                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                        <li><strong>Title</strong> - Project information</li>
-                        <li><strong>Work Order</strong> - Original work items</li>
-                        <li><strong>Bill Quantity</strong> - Actual measurements</li>
-                        <li><strong>Extra Items</strong> - Additional work (optional)</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
-            elif "column" in error_msg.lower() or "key" in error_msg.lower():
-                st.markdown("""
-                <div class="status-error">
-                    <h4 style="margin-bottom: 0.5rem;">❌ Column Format Issue</h4>
-                    <p style="margin: 0;">Your Excel file has missing or incorrectly named columns. Please check:</p>
-                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                        <li><strong>Work Order & Bill Quantity sheets</strong> should have: Item, Description, Unit, Quantity, Rate, Amount</li>
-                        <li><strong>Title sheet</strong> should have project information in the first two columns</li>
-                        <li>Column names should match exactly (case-sensitive)</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
-            elif "permission" in error_msg.lower() or "access" in error_msg.lower():
-                st.markdown("""
-                <div class="status-error">
-                    <h4 style="margin-bottom: 0.5rem;">❌ File Access Issue</h4>
-                    <p style="margin: 0;">Cannot access your Excel file. Please try:</p>
-                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                        <li>Close the Excel file if it's open in another program</li>
-                        <li>Check if the file is corrupted</li>
-                        <li>Try uploading a different Excel file</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="status-error">
-                    <h4 style="margin-bottom: 0.5rem;">❌ Processing Error</h4>
-                    <p style="margin: 0;">Error: {error_msg}</p>
-                    <p style="margin: 0.5rem 0 0 0;">Please check your Excel file format and try again.</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with st.expander("🔍 Technical Error Details"):
-                st.code(traceback.format_exc())
-                
-            # Add helpful troubleshooting section
-            st.markdown("""
-            <div class="status-info">
-                <h4 style="margin-bottom: 0.5rem;">💡 Troubleshooting Tips</h4>
-                <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                    <li>Ensure your Excel file has all required sheets with correct names</li>
-                    <li>Check that data starts from the first row (no empty rows at top)</li>
-                    <li>Verify column headers match the expected format</li>
-                    <li>Make sure numeric columns contain only numbers (no text like "Above")</li>
-                    <li>Try using one of the test files that worked successfully</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-
-    # Enhanced instructions with better formatting
-    st.markdown("""
-    <div class="instructions-container">
-        <h2 class="how-to-title">🎯 How to Use This System</h2>
-        <p class="how-to-subtitle">Simple steps to generate your billing documents in minutes!</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Three main steps using Streamlit columns
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown("""
-        <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; margin: 1rem 0;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
-            <h3>Step 1: Upload</h3>
-            <p>Just drag & drop your Excel file or click to browse</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 15px; margin: 1rem 0;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">⚡</div>
-            <h3>Step 2: Wait</h3>
-            <p>System automatically creates all your documents</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("""
-        <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border-radius: 15px; margin: 1rem 0;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">📥</div>
-            <h3>Step 3: Download</h3>
-            <p>Get all documents in one convenient package</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # Detailed information in expandable sections
-    with st.expander("📋 What Your Excel File Should Have"):
-        st.markdown("""
-        **Title Sheet:** Project details like name, contract number  
-        **Work Order:** Original planned work items  
-        **Bill Quantity:** Actual work completed  
-        **Extra Items:** Any additional work (optional)
-        """)
-
-    with st.expander("📄 What Documents You'll Get"):
-        st.markdown("""
-        **Professional Documents:** First Page Summary, Deviation Statement, Bill Scrutiny, Certificates  
-        **Multiple Formats:** PDF for printing, Word for editing, HTML for viewing  
-        **Ready to Submit:** All documents follow government standards
-        """)
-
-    with st.expander("💡 Quick Tips"):
-        st.markdown("""
-        **File Size:** Works with files up to 10MB  
-        **Format:** Excel files (.xlsx or .xls)  
-        **Speed:** Processing takes 30-60 seconds  
-        **Security:** All data stays secure on your device
-        """)
+        # Provide reset option
+        if st.button("🔄 Reset Application"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
 if __name__ == "__main__":
-    main()
+    run_app()

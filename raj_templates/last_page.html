@@ -1,0 +1,19 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Last Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 10pt; }
+        p { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    {% for note in data.notes %}
+        <p>{{ note }}</p>
+    {% endfor %}
+    <p>Payable Amount: {{ data.payable_amount | default("") }}</p>
+    <p>Total in Words: {{ data.amount_words | default("") }}</p>
+</body>
+</html>

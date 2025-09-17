@@ -1,26 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <title>Extra Items</title>
     <style>
         @page { size: A4; margin: 10mm; }
         * { box-sizing: border-box; }
-        body { font-family: Calibri, Arial, sans-serif; font-size: 9pt; margin: 0; }
-        .container { width: 100%; margin: 0 auto; padding: 0; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+        }
+        .container {
+            margin: 10mm;
+            width: calc(100% - 20mm);
+            min-height: calc(100vh - 20mm);
+            box-sizing: border-box;
+        }
+        h2 { text-align: center; margin: 0 0 10mm 0; font-size: 14pt; }
+        .table-wrapper {
+            width: 100%;
+            overflow: hidden;
+            border: 1px solid black;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 0 auto;
+            border: 1px solid black;
+        }
         thead { display: table-header-group; }
         tr { break-inside: avoid; }
-        th, td { border: 1px solid black; padding: 5px; text-align: left; word-wrap: break-word; }
-        .header { text-align: center; }
+        th, td {
+            border: 1px solid black;
+            padding: 5px;
+            font-size: 8pt;
+            vertical-align: top;
+            word-wrap: break-word;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h2>Extra Items</h2>
-        </div>
-        <table>
+        <h2>Extra Items</h2>
+        <div class="table-wrapper">
+            <table>
             <thead>
                 <tr>
                     <th>Serial No.</th>
@@ -51,7 +83,8 @@
                     </tr>
                 {% endif %}
             </tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </body>
 </html>

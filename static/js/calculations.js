@@ -1,5 +1,5 @@
 /**
- * Calculations JavaScript - Infrastructure Billing System
+ * Calculations JavaScript - Bill Generator
  * Real-time calculation utilities and mathematical functions
  */
 

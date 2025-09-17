@@ -92,6 +92,15 @@ class DocumentGenerator:
                 return name
         return None
     
+    def _has_extra_items(self):
+        """Check if there are any extra items"""
+        if isinstance(self.extra_items_data, pd.DataFrame):
+            return not self.extra_items_data.empty and len(self.extra_items_data) > 0
+        elif isinstance(self.extra_items_data, (list, tuple)):
+            return len(self.extra_items_data) > 0
+        else:
+            return False
+    
     def _prepare_template_data(self) -> Dict[str, Any]:
         """Prepare data structure for Jinja2 templates"""
         # Calculate totals and prepare structured data
@@ -209,7 +218,11 @@ class DocumentGenerator:
             documents['First Page Summary'] = self._render_template('first_page.html')
             documents['Deviation Statement'] = self._render_template('deviation_statement.html') 
             documents['Final Bill Scrutiny Sheet'] = self._render_template('note_sheet.html')
-            documents['Extra Items Statement'] = self._render_template('extra_items.html')
+            
+            # Only generate Extra Items document if there are extra items
+            if self._has_extra_items():
+                documents['Extra Items Statement'] = self._render_template('extra_items.html')
+            
             documents['Certificate II'] = self._render_template('certificate_ii.html')
             documents['Certificate III'] = self._render_template('certificate_iii.html')
         except Exception as e:
@@ -218,7 +231,11 @@ class DocumentGenerator:
             documents['First Page Summary'] = self._generate_first_page()
             documents['Deviation Statement'] = self._generate_deviation_statement()
             documents['Final Bill Scrutiny Sheet'] = self._generate_final_bill_scrutiny()
-            documents['Extra Items Statement'] = self._generate_extra_items_statement()
+            
+            # Only generate Extra Items document if there are extra items
+            if self._has_extra_items():
+                documents['Extra Items Statement'] = self._generate_extra_items_statement()
+            
             documents['Certificate II'] = self._generate_certificate_ii()
             documents['Certificate III'] = self._generate_certificate_iii()
         
@@ -385,12 +402,8 @@ class DocumentGenerator:
             <title>First Page Summary</title>
             <style>
                 @page {{ 
-                    size: A4; 
+                    size: A4 portrait; 
                     margin: 10mm 10mm 10mm 10mm;
-                    margin-top: 10mm;
-                    margin-right: 10mm;
-                    margin-bottom: 10mm;
-                    margin-left: 10mm;
                 }}
                 * {{ box-sizing: border-box; }}
                 body {{ 
@@ -410,7 +423,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; vertical-align: top; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -418,10 +431,8 @@ class DocumentGenerator:
         <body>
             <div class="page">
             <div class="header">
-                <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">First Page Summary</div>
                 <div class="subtitle">Date: {current_date}</div>
-                <div style="font-size: 8pt; color: #666; margin-top: 5px; font-style: italic;">Enhanced document formatting powered by Warp AI Terminal</div>
             </div>
             
             <h3>Project Information</h3>
@@ -534,7 +545,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 4px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word; font-size: 8.5pt; }}
+                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word; font-size: 8.5pt; vertical-align: top; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -542,7 +553,6 @@ class DocumentGenerator:
         <body>
             <div class="page">
             <div class="header">
-                <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Deviation Statement</div>
                 <div class="subtitle">Date: {current_date}</div>
             </div>
@@ -664,7 +674,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; vertical-align: top; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -672,7 +682,6 @@ class DocumentGenerator:
         <body>
             <div class="page">
             <div class="header">
-                <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Final Bill Scrutiny Sheet</div>
                 <div class="subtitle">Date: {current_date}</div>
             </div>
@@ -756,7 +765,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; vertical-align: top; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -764,7 +773,6 @@ class DocumentGenerator:
         <body>
             <div class="page">
             <div class="header">
-                <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Extra Items Statement</div>
                 <div class="subtitle">Date: {current_date}</div>
             </div>
@@ -860,7 +868,6 @@ class DocumentGenerator:
         <body>
             <div class="page">
             <div class="header">
-                <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Certificate II</div>
                 <div class="subtitle">Date: {current_date}</div>
             </div>
@@ -926,7 +933,6 @@ class DocumentGenerator:
         <body>
             <div class="page">
             <div class="header">
-                <div class="title">🏛️ Infrastructure Billing System</div>
                 <div class="subtitle">Certificate III</div>
                 <div class="subtitle">Date: {current_date}</div>
             </div>

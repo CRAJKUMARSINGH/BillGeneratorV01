@@ -1,0 +1,198 @@
+<html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>First Page Summary</title>
+    <style>
+        @page { 
+            size: A4; 
+            margin: 14mm 14mm 10mm 14mm;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+        }
+        .container {
+            margin: 14mm 14mm 10mm 14mm;
+            width: 182mm;
+            min-height: 287mm;
+            box-sizing: border-box;
+        }
+        .header { text-align: center; margin-bottom: 10mm; }
+        .title { font-size: 16pt; font-weight: bold; }
+        .subtitle { font-size: 11pt; margin: 3px 0; }
+        .table-wrapper {
+            width: 100%;
+            overflow: hidden;
+            border: 0.026mm solid black;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 0 auto;
+            margin-bottom: 15mm;
+            border: 0.026mm solid black;
+        }
+        thead { display: table-header-group; }
+        tr, img { break-inside: avoid; }
+        th, td {
+            border: 0.026mm solid black;
+            padding: 0.6mm;
+            font-size: 8pt;
+            vertical-align: top;
+            height: 18mm;
+            word-wrap: break-word;
+        }
+        th {
+            font-size: 7pt;
+            text-align: center;
+            vertical-align: middle;
+            height: 15mm;
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .description {
+            text-align: justify;
+            overflow-wrap: break-word;
+        }
+        .amount { text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="container">
+    <div class="header">
+        <div class="title">CONTRACTOR BILL</div>
+    </div>
+    
+    <h3>Project Information</h3>
+    <table>
+        <tr><td><strong>Project Name:</strong></td><td>{{ title_data.get('Name of Work ;-', 'N/A') }}</td></tr>
+        <tr><td><strong>Contract No:</strong></td><td>{{ title_data.get('Agreement No.', 'N/A') }}</td></tr>
+        <tr><td><strong>Work Order No:</strong></td><td>{{ title_data.get('Reference to work order or Agreement :', 'N/A') }}</td></tr>
+        <tr><td><strong>Contractor:</strong></td><td>{{ title_data.get('Name of Contractor or supplier :', 'N/A') }}</td></tr>
+        <tr><td><strong>Bill Number:</strong></td><td>{{ title_data.get('Bill Number', 'N/A') }}</td></tr>
+        <tr><td><strong>Bill Type:</strong></td><td>{{ title_data.get('Running or Final', 'N/A') }}</td></tr>
+    </table>
+    
+    <h3>Work Items Summary</h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 8mm;">Unit</th>
+                    <th style="width: 12mm;">Quantity executed (or supplied) since last certificate</th>
+                    <th style="width: 12mm;">Quantity executed (or supplied) upto date as per MB</th>
+                    <th style="width: 7mm;">S. No.</th>
+                    <th style="width: 125mm;">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+                    <th style="width: 12mm;">Rate</th>
+                    <th style="width: 16mm;">Upto date Amount</th>
+                    <th style="width: 16mm;">Amount Since previous bill (Total for each sub-head)</th>
+                    <th style="width: 10mm;">Remarks</th>
+                </tr>
+                <tr>
+                    <th>1</th>
+                    <th>2</th>
+                    <th>3</th>
+                    <th>4</th>
+                    <th>5</th>
+                    <th>6</th>
+                    <th>7</th>
+                    <th>8</th>
+                    <th>9</th>
+                </tr>
+            </thead>
+        <tbody>
+{% for item in work_items %}
+            <tr>
+                <td style="width: 8mm;">{{ item.unit }}</td>
+                <td style="width: 12mm;" class="amount">{{ "%.2f"|format(item.quantity_since) if item.quantity_since > 0 else "" }}</td>
+                <td style="width: 12mm;" class="amount">{{ "%.2f"|format(item.quantity_upto) if item.quantity_upto > 0 else "" }}</td>
+                <td style="width: 7mm;">{{ item.item_no }}</td>
+                <td class="description" style="width: 125mm;">{{ item.description }}</td>
+                <td style="width: 12mm;" class="amount">{{ "%.2f"|format(item.rate) if item.rate > 0 else "" }}</td>
+                <td style="width: 16mm;" class="amount">{{ "%.2f"|format(item.amount_upto) if item.amount_upto > 0 else "" }}</td>
+                <td style="width: 16mm;" class="amount">{{ "%.2f"|format(item.amount_since) if item.amount_since > 0 else "" }}</td>
+                <td style="width: 10mm;">{{ item.remark }}</td>
+            </tr>
+{% endfor %}
+            <tr style="font-weight: bold;">
+                <td colspan="6">TOTAL</td>
+                <td class="amount">{{ "%.2f"|format(total_amount) }}</td>
+                <td class="amount">{{ "%.2f"|format(total_amount) }}</td>
+                <td></td>
+            </tr>
+{% if tender_premium_percent > 0 %}
+            <tr style="font-weight: bold;">
+                <td colspan="6">Tender Premium @ {{ "%.2f%%"|format(tender_premium_percent) }}</td>
+                <td class="amount">{{ "%.2f"|format(premium_amount) }}</td>
+                <td class="amount">{{ "%.2f"|format(premium_amount) }}</td>
+                <td></td>
+            </tr>
+{% endif %}
+            <tr style="font-weight: bold; background-color: #e8f5e9;">
+                <td colspan="6">GRAND TOTAL</td>
+                <td class="amount">{{ "%.2f"|format(grand_total) }}</td>
+                <td class="amount">{{ "%.2f"|format(grand_total) }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+        </table>
+    </div>
+    
+{% if extra_items %}
+    <h3>Extra Items Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Unit</th>
+                <th>Quantity</th>
+                <th>Item No.</th>
+                <th>Description</th>
+                <th>Rate</th>
+                <th>Amount</th>
+                <th>Remark</th>
+            </tr>
+        </thead>
+        <tbody>
+{% for item in extra_items %}
+            <tr>
+                <td>{{ item.unit }}</td>
+                <td class="amount">{{ "%.2f"|format(item.quantity) if item.quantity > 0 else "" }}</td>
+                <td>{{ item.item_no }}</td>
+                <td>{{ item.description }}</td>
+                <td class="amount">{{ "%.2f"|format(item.rate) if item.rate > 0 else "" }}</td>
+                <td class="amount">{{ "%.2f"|format(item.amount) if item.amount > 0 else "" }}</td>
+                <td>{{ item.remark }}</td>
+            </tr>
+{% endfor %}
+            <tr style="font-weight: bold;">
+                <td colspan="5">Extra Items Total</td>
+                <td class="amount">{{ "%.2f"|format(extra_total) }}</td>
+                <td></td>
+            </tr>
+{% if tender_premium_percent > 0 %}
+            <tr style="font-weight: bold;">
+                <td colspan="5">Extra Items Premium @ {{ "%.2f%%"|format(tender_premium_percent) }}</td>
+                <td class="amount">{{ "%.2f"|format(extra_premium) }}</td>
+                <td></td>
+            </tr>
+{% endif %}
+            <tr style="font-weight: bold; background-color: #e8f5e9;">
+                <td colspan="5">Extra Items Grand Total</td>
+                <td class="amount">{{ "%.2f"|format(extra_grand_total) }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+{% endif %}
+    
+    <div style="margin-top: 20px; text-align: center; font-size: 8pt; color: #666;">
+        Generated on: {{ current_date }}
+    </div>
+    </div>
+</body>
+</html>
