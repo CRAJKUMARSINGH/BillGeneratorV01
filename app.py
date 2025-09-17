@@ -673,33 +673,42 @@ def show_data_preview(data: Dict):
 
     # Work order preview
     work_order_data = data.get('work_order_data')
-    if work_order_data is not None and (isinstance(work_order_data, (list, dict)) or not work_order_data.empty if hasattr(work_order_data, 'empty') else True):
-        with st.expander("📋 Work Order Summary"):
-            if isinstance(work_order_data, pd.DataFrame):
-                work_order_df = work_order_data
-            else:
+    if work_order_data is not None:
+        # Safe DataFrame check
+        if isinstance(work_order_data, pd.DataFrame):
+            if not work_order_data.empty:
+                with st.expander("📋 Work Order Summary"):
+                    st.dataframe(work_order_data, hide_index=True, use_container_width=True)
+        elif isinstance(work_order_data, (list, dict)) and len(work_order_data) > 0:
+            with st.expander("📋 Work Order Summary"):
                 work_order_df = pd.DataFrame(work_order_data)
-            st.dataframe(work_order_df, hide_index=True, use_container_width=True)
+                st.dataframe(work_order_df, hide_index=True, use_container_width=True)
 
     # Bill quantity preview
     bill_quantity_data = data.get('bill_quantity_data')
-    if bill_quantity_data is not None and (isinstance(bill_quantity_data, (list, dict)) or not bill_quantity_data.empty if hasattr(bill_quantity_data, 'empty') else True):
-        with st.expander("💰 Bill Quantities"):
-            if isinstance(bill_quantity_data, pd.DataFrame):
-                bill_df = bill_quantity_data
-            else:
+    if bill_quantity_data is not None:
+        # Safe DataFrame check
+        if isinstance(bill_quantity_data, pd.DataFrame):
+            if not bill_quantity_data.empty:
+                with st.expander("💰 Bill Quantities"):
+                    st.dataframe(bill_quantity_data, hide_index=True, use_container_width=True)
+        elif isinstance(bill_quantity_data, (list, dict)) and len(bill_quantity_data) > 0:
+            with st.expander("💰 Bill Quantities"):
                 bill_df = pd.DataFrame(bill_quantity_data)
-            st.dataframe(bill_df, hide_index=True, use_container_width=True)
+                st.dataframe(bill_df, hide_index=True, use_container_width=True)
 
     # Extra items preview
     extra_items_data = data.get('extra_items_data')
-    if extra_items_data is not None and (isinstance(extra_items_data, (list, dict)) or not extra_items_data.empty if hasattr(extra_items_data, 'empty') else True):
-        with st.expander("➕ Extra Items"):
-            if isinstance(extra_items_data, pd.DataFrame):
-                extra_df = extra_items_data
-            else:
+    if extra_items_data is not None:
+        # Safe DataFrame check
+        if isinstance(extra_items_data, pd.DataFrame):
+            if not extra_items_data.empty:
+                with st.expander("➕ Extra Items"):
+                    st.dataframe(extra_items_data, hide_index=True, use_container_width=True)
+        elif isinstance(extra_items_data, (list, dict)) and len(extra_items_data) > 0:
+            with st.expander("➕ Extra Items"):
                 extra_df = pd.DataFrame(extra_items_data)
-            st.dataframe(extra_df, hide_index=True, use_container_width=True)
+                st.dataframe(extra_df, hide_index=True, use_container_width=True)
 
 def generate_documents_excel_mode(data: Dict):
     """Generate documents using processed Excel data with modified title information"""
@@ -965,10 +974,16 @@ def show_work_order_preview():
             title_df = pd.DataFrame([st.session_state.title_data])
             st.dataframe(title_df, hide_index=True, use_container_width=True)
 
-    if st.session_state.work_order_data:
-        with st.expander("📋 Work Items", expanded=True):
-            work_df = pd.DataFrame(st.session_state.work_order_data)
-            st.dataframe(work_df, hide_index=True, use_container_width=True)
+    if st.session_state.work_order_data is not None:
+        # Safe check for DataFrame or list/dict
+        if isinstance(st.session_state.work_order_data, pd.DataFrame):
+            if not st.session_state.work_order_data.empty:
+                with st.expander("📋 Work Items", expanded=True):
+                    st.dataframe(st.session_state.work_order_data, hide_index=True, use_container_width=True)
+        elif isinstance(st.session_state.work_order_data, (list, dict)) and len(st.session_state.work_order_data) > 0:
+            with st.expander("📋 Work Items", expanded=True):
+                work_df = pd.DataFrame(st.session_state.work_order_data)
+                st.dataframe(work_df, hide_index=True, use_container_width=True)
 
 def show_bill_quantity_entry():
     """Step 2: Enter bill quantities for work items - Scrollable table format"""
@@ -979,8 +994,25 @@ def show_bill_quantity_entry():
     </div>
     """, unsafe_allow_html=True)
 
-    if not st.session_state.work_order_data:
+    # Safe check for work order data
+    if st.session_state.work_order_data is None:
         st.error("⚠️ No work order data found. Please complete Step 1 first.")
+        if st.button("⬅️ Go Back to Step 1"):
+            st.session_state.step = 1
+            st.rerun()
+        return
+    
+    # Additional check for empty DataFrame
+    if isinstance(st.session_state.work_order_data, pd.DataFrame) and st.session_state.work_order_data.empty:
+        st.error("⚠️ Work order data is empty. Please complete Step 1 first.")
+        if st.button("⬅️ Go Back to Step 1"):
+            st.session_state.step = 1
+            st.rerun()
+        return
+    
+    # Check for empty list/dict
+    if isinstance(st.session_state.work_order_data, (list, dict)) and len(st.session_state.work_order_data) == 0:
+        st.error("⚠️ Work order data is empty. Please complete Step 1 first.")
         if st.button("⬅️ Go Back to Step 1"):
             st.session_state.step = 1
             st.rerun()
