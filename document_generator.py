@@ -615,7 +615,7 @@ class DocumentGenerator:
                 matching_rows = self.bill_quantity_data[
                     self.bill_quantity_data[bq_item_col] == wo_item
                 ]
-                if isinstance(matching_rows, pd.DataFrame) and not matching_rows.empty:
+                if not matching_rows.empty:
                     bq_row = matching_rows.iloc[0]
             
             wo_qty = self._safe_float(wo_row.get('Quantity Since', wo_row.get('Quantity', 0)))
