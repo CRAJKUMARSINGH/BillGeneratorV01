@@ -8,6 +8,7 @@ try:
 	import psutil  # type: ignore
 except Exception:  # pragma: no cover
 	psutil = None  # type: ignore
+import pandas as pd
 import hashlib
 from functools import lru_cache, wraps
 from typing import Any, Dict, Optional
@@ -112,7 +113,7 @@ optimizer = PerformanceOptimizer()
 
 def optimize_dataframe_memory(df):
 	"""Optimize DataFrame memory usage"""
-	if df is None or df.empty:
+	if df is None or (isinstance(df, pd.DataFrame) and df.empty):
 		return df
 		
 	# Convert object columns to category where appropriate
@@ -211,7 +212,7 @@ class StreamlitOptimizer:
 					st.session_state.performance_metrics = metrics[-50:]
 			
 			# Clear temporary data
-			temp_keys = [key for key in st.session_state.keys() if key.startswith('temp_')]
+			temp_keys = [str(key) for key in st.session_state.keys() if str(key).startswith('temp_')]
 			for key in temp_keys:
 				del st.session_state[key]
 	

@@ -79,6 +79,19 @@ class DocumentGenerator:
         except (ValueError, TypeError):
             return 0.0
     
+    def _format_number(self, value, show_zero=False):
+        """Format number with conditional display for zero values"""
+        num_value = self._safe_float(value)
+        if num_value == 0 and not show_zero:
+            return ""
+        return f"{num_value:.2f}"
+    
+    def _format_unit_or_text(self, value):
+        """Format unit or text field, return empty string for NaN/None"""
+        if pd.isna(value) or value is None or str(value).lower() in ['nan', 'none']:
+            return ""
+        return str(value).strip()
+    
     def _safe_serial_no(self, value):
         """Safely convert serial number, return empty string if NaN or None"""
         if pd.isna(value) or value is None or str(value).lower() == 'nan':
@@ -130,7 +143,7 @@ class DocumentGenerator:
         extra_items = []
         extra_total = 0
         
-        if not self.extra_items_data.empty:
+        if isinstance(self.extra_items_data, pd.DataFrame) and not self.extra_items_data.empty:
             for index, row in self.extra_items_data.iterrows():
                 quantity = self._safe_float(row.get('Quantity', 0))
                 rate = self._safe_float(row.get('Rate', 0))
@@ -291,15 +304,25 @@ class DocumentGenerator:
             import io as _io
             def render_with_xhtml2pdf(html_str: str) -> bytes:
                 # xhtml2pdf is more reliable but less feature-rich
+                # Clean HTML for better compatibility
+                clean_html = html_str
+                # Replace mm units with px
+                import re
+                clean_html = re.sub(r'(\d+(?:\.\d+)?)mm', lambda m: f"{float(m.group(1)) * 3.78:.0f}px", clean_html)
+                # Remove problematic CSS
+                clean_html = clean_html.replace('box-sizing: border-box;', '')
+                clean_html = clean_html.replace('table-layout: fixed;', '')
+                clean_html = clean_html.replace('break-inside: avoid;', '')
+                
                 output = _io.BytesIO()
                 result = pisa.CreatePDF(
-                    src=html_str, 
+                    src=clean_html, 
                     dest=output, 
                     encoding="utf-8",
                     default_css=None,
                     link_callback=None
                 )
-                if result.err:
+                if hasattr(result, 'err') and result.err:
                     raise Exception(f"xhtml2pdf error: {result.err}")
                 return output.getvalue()
         except Exception:
@@ -402,8 +425,12 @@ class DocumentGenerator:
             <title>First Page Summary</title>
             <style>
                 @page {{ 
-                    size: A4 portrait; 
+                    size: A4; 
                     margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
                 }}
                 * {{ box-sizing: border-box; }}
                 body {{ 
@@ -423,7 +450,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; vertical-align: top; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -545,7 +572,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 4px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word; font-size: 8.5pt; vertical-align: top; }}
+                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word; font-size: 8.5pt; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -582,7 +609,7 @@ class DocumentGenerator:
         for index, wo_row in self.work_order_data.iterrows():
             # Find corresponding bill quantity row
             bq_row = None
-            if not self.bill_quantity_data.empty:
+            if isinstance(self.bill_quantity_data, pd.DataFrame) and not self.bill_quantity_data.empty:
                 wo_item = wo_row.get('Item No.', wo_row.get('Item', ''))
                 bq_item_col = 'Item No.' if 'Item No.' in self.bill_quantity_data.columns else 'Item'
                 matching_rows = self.bill_quantity_data[
@@ -674,7 +701,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; vertical-align: top; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -712,10 +739,10 @@ class DocumentGenerator:
                     <tr>
                         <td>{self._safe_serial_no(row.get('Item No.', row.get('Item', '')))}</td>
                         <td>{row.get('Description', '')}</td>
-                        <td>{row.get('Unit', '')}</td>
-                        <td class="amount">{quantity:.2f}</td>
-                        <td class="amount">{rate:.2f}</td>
-                        <td class="amount">{amount:.2f}</td>
+                        <td>{self._format_unit_or_text(row.get('Unit', ''))}</td>
+                        <td class="amount">{self._format_number(quantity)}</td>
+                        <td class="amount">{self._format_number(rate)}</td>
+                        <td class="amount">{self._format_number(amount)}</td>
                     </tr>
             """
         
@@ -765,7 +792,7 @@ class DocumentGenerator:
                 table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; vertical-align: top; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
             </style>
@@ -778,7 +805,7 @@ class DocumentGenerator:
             </div>
         """
         
-        if not self.extra_items_data.empty:
+        if isinstance(self.extra_items_data, pd.DataFrame) and not self.extra_items_data.empty:
             html_content += """
             <h3>Extra Items</h3>
             <table>
@@ -806,10 +833,10 @@ class DocumentGenerator:
                         <tr>
                             <td>{self._safe_serial_no(row.get('Item No.', row.get('Item No', row.get('Item', ''))))}</td>
                             <td>{row.get('Description', '')}</td>
-                            <td>{row.get('Unit', '')}</td>
-                            <td class="amount">{quantity:.2f}</td>
-                            <td class="amount">{rate:.2f}</td>
-                            <td class="amount">{amount:.2f}</td>
+                            <td>{self._format_unit_or_text(row.get('Unit', ''))}</td>
+                            <td class="amount">{self._format_number(quantity)}</td>
+                            <td class="amount">{self._format_number(rate)}</td>
+                            <td class="amount">{self._format_number(amount)}</td>
                         </tr>
                 """
             

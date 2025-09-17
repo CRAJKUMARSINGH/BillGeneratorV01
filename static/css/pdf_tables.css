@@ -1,0 +1,32 @@
+/* Shared table column widths for PDF generation */
+
+/* First Page Summary table widths */
+table.first-page-summary col.col-unit { width: 11.7mm; }
+table.first-page-summary col.col-qty-since { width: 16mm; }
+table.first-page-summary col.col-qty-upto { width: 16mm; }
+table.first-page-summary col.col-item-no { width: 11.1mm; }
+table.first-page-summary col.col-description { width: 74.2mm; }
+table.first-page-summary col.col-rate { width: 15.3mm; }
+table.first-page-summary col.col-amt-upto { width: 22.7mm; }
+table.first-page-summary col.col-amt-since { width: 17.6mm; }
+table.first-page-summary col.col-remark { width: 13.9mm; }
+
+/* Deviation Statement table widths */
+table.deviation-statement col.col-item-no { width: 6mm; }
+table.deviation-statement col.col-description { width: 95mm; }
+table.deviation-statement col.col-unit { width: 10mm; }
+table.deviation-statement col.col-qty-wo { width: 10mm; }
+table.deviation-statement col.col-rate { width: 12mm; }
+table.deviation-statement col.col-amt-wo { width: 12mm; }
+table.deviation-statement col.col-qty-executed { width: 12mm; }
+table.deviation-statement col.col-amt-executed { width: 12mm; }
+table.deviation-statement col.col-excess-qty { width: 12mm; }
+table.deviation-statement col.col-excess-amt { width: 12mm; }
+table.deviation-statement col.col-saving-qty { width: 12mm; }
+table.deviation-statement col.col-saving-amt { width: 12mm; }
+table.deviation-statement col.col-remarks { width: 40mm; }
+
+/* General table settings */
+table { table-layout: fixed; width: 100%; border-collapse: collapse; }
+th, td { word-wrap: break-word; }
+

@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
-    page_title="Enhanced Bill Generator",
-    page_icon="📋",
+    page_title="Infrastructure Billing System",
+    page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -39,14 +39,59 @@ def load_custom_css():
     st.markdown("""
     <style>
     /* Main container styling */
-    .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem 0;
-        border-radius: 10px;
-        text-align: center;
+    .main > div {
+        padding: 2rem 1rem;
+    }
+
+    /* Header styling - Green gradient design */
+    .header-container {
+        background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 50%, #81C784 100%);
         color: white;
+        padding: 2rem;
+        border-radius: 10px;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .header-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+
+    .header-subtitle {
+        font-size: 1.2rem;
+        text-align: center;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+
+    .header-professional {
+        font-size: 1rem;
+        text-align: center;
+        color: #e8f5e9;
+        opacity: 0.85;
+        margin-bottom: 0.5rem;
+        font-weight: 400;
+        font-style: italic;
+        letter-spacing: 0.8px;
+    }
+
+    .header-initiative {
+        font-size: 0.9rem;
+        text-align: center;
+        color: #ffffff;
+        opacity: 0.9;
+        margin-bottom: 0;
+        font-weight: 500;
+        background: rgba(255,255,255,0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.2);
+        display: inline-block;
+        margin: 0 auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     /* Mode selection cards */
@@ -67,14 +112,31 @@ def load_custom_css():
     }
 
     .mode-card:hover {
-        border-color: #667eea;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        border-color: #4CAF50;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
         transform: translateY(-2px);
+        background: #f8fff8;
     }
 
     .mode-card.selected {
-        border-color: #667eea;
-        background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+        border-color: #4CAF50;
+        background: linear-gradient(135deg, #f8f9ff 0%, #e8f5e9 100%);
+    }
+
+    /* Upload card styling */
+    .upload-card {
+        background: #ffffff;
+        border: 2px dashed #4CAF50;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .upload-card:hover {
+        border-color: #45a049;
+        background: #f8fff8;
     }
 
     /* Progress indicator styles */
@@ -117,8 +179,8 @@ def load_custom_css():
     }
 
     .progress-circle.current {
-        background: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        background: #4CAF50;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
     }
 
     /* Form styling */
@@ -133,7 +195,7 @@ def load_custom_css():
 
     .form-section h3 {
         color: #2c3e50;
-        border-bottom: 2px solid #667eea;
+        border-bottom: 2px solid #4CAF50;
         padding-bottom: 0.5rem;
         margin-bottom: 1.5rem;
     }
@@ -145,7 +207,7 @@ def load_custom_css():
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         text-align: center;
-        border-left: 4px solid #667eea;
+        border-left: 4px solid #4CAF50;
     }
 
     .metric-value {
@@ -160,9 +222,70 @@ def load_custom_css():
         margin-top: 0.5rem;
     }
 
+    /* Enhanced work order table styles */
+    .work-order-table-container {
+        max-height: 600px;
+        overflow-y: auto;
+        border: 2px solid #e1e5e9;
+        border-radius: 10px;
+        background: #f8f9fa;
+        margin: 20px 0;
+    }
+    .work-order-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    .work-order-table th {
+        background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+        color: white;
+        padding: 12px 8px;
+        text-align: left;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 2px solid #45a049;
+    }
+    .work-order-table td {
+        padding: 12px 8px;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: top;
+    }
+    .work-order-table tr:hover {
+        background-color: #f7fafc;
+    }
+    .item-row {
+        border-left: 4px solid #4CAF50;
+    }
+    .item-description {
+        font-weight: 500;
+        color: #2d3748;
+        line-height: 1.4;
+    }
+    .wo-qty-info {
+        font-size: 0.85em;
+        color: #718096;
+        font-style: italic;
+    }
+    .rate-display {
+        font-weight: bold;
+        color: #2b6cb0;
+        font-size: 1.05em;
+    }
+    .amount-cell {
+        font-weight: bold;
+        color: #28a745;
+        font-size: 1.1em;
+        text-align: right;
+    }
+    .qty-input-cell {
+        width: 120px;
+    }
+
     /* Button styling */
     .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
         color: white;
         border: none;
         border-radius: 8px;
@@ -173,7 +296,16 @@ def load_custom_css():
 
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    /* Results styling */
+    .results-container {
+        background: #e8f5e9;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border-left: 5px solid #4CAF50;
     }
 
     /* Mobile responsiveness */
@@ -190,6 +322,14 @@ def load_custom_css():
 
         .form-section {
             padding: 1rem;
+        }
+
+        .header-title {
+            font-size: 2rem;
+        }
+
+        .header-subtitle {
+            font-size: 1rem;
         }
     }
     </style>
@@ -220,13 +360,42 @@ def initialize_session_state():
         st.session_state.generated_documents = []
 
 def show_header():
-    """Display the application header"""
+    """Display the application header with government logo and professional design"""
+    # Load and encode the government logo
+    logo_path = Path(__file__).parent / "static" / "images" / "government_logo.svg"
+    
+    try:
+        if logo_path.exists():
+            with open(logo_path, "r", encoding="utf-8") as f:
+                logo_svg = f.read()
+        else:
+            # Fallback to default icon if logo not found
+            logo_svg = None
+    except Exception:
+        logo_svg = None
+    
     st.markdown("""
-    <div class="main-header">
-        <h1>📋 Enhanced Bill Generator</h1>
-        <p>Professional infrastructure billing with Excel upload and online entry capabilities</p>
+    <div class="header-container">
+        <div style="text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                <div style="margin-right: 1rem;">
+                    {logo_element}
+                </div>
+                <div style="font-size: 4rem; color: white;">🏛️</div>
+            </div>
+            <div class="header-title">Infrastructure Billing System</div>
+            <div class="header-subtitle">Professional Document Generation & Compliance Solution</div>
+            <div class="header-professional">Advanced Multi-Format Document Processing with Election Commission Compliance</div>
+            <div style="margin-top: 1.5rem;">
+                <div class="header-initiative">
+                    An Initiative by Mrs. Premlata Jain, Additional Administrative Officer, PWD, Udaipur
+                </div>
+            </div>
+        </div>
     </div>
-    """, unsafe_allow_html=True)
+    """.format(
+        logo_element=f'<div style="width: 60px; height: 60px;">{logo_svg}</div>' if logo_svg else ''
+    ), unsafe_allow_html=True)
 
 def show_progress_indicator(current_step: int, total_steps: int = 4):
     """Show progress indicator for online mode"""
@@ -324,6 +493,48 @@ def show_mode_selection():
 
     st.dataframe(comparison_df, hide_index=True, use_container_width=True)
 
+    # Feature highlights
+    st.markdown("---")
+    st.markdown("### ⭐ Key Features")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown("""
+        <div style="text-align: center; padding: 1.5rem; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-radius: 10px; margin: 0.5rem 0; border: 1px solid #4CAF50;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem; color: #2E7D32;">📄</div>
+            <h4 style="color: #1B5E20; margin-bottom: 0.5rem;">Multi-Format Output</h4>
+            <p style="color: #2E7D32; font-size: 0.85rem; margin: 0;">PDF, HTML, Excel & more</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; padding: 1.5rem; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 10px; margin: 0.5rem 0; border: 1px solid #2196F3;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem; color: #1976D2;">⚡</div>
+            <h4 style="color: #0D47A1; margin-bottom: 0.5rem;">Real-time Processing</h4>
+            <p style="color: #1976D2; font-size: 0.85rem; margin: 0;">Instant calculations & updates</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style="text-align: center; padding: 1.5rem; background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-radius: 10px; margin: 0.5rem 0; border: 1px solid #FF9800;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem; color: #F57C00;">🔒</div>
+            <h4 style="color: #E65100; margin-bottom: 0.5rem;">Compliance Ready</h4>
+            <p style="color: #F57C00; font-size: 0.85rem; margin: 0;">Election Commission standards</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown("""
+        <div style="text-align: center; padding: 1.5rem; background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%); border-radius: 10px; margin: 0.5rem 0; border: 1px solid #E91E63;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem; color: #C2185B;">📱</div>
+            <h4 style="color: #880E4F; margin-bottom: 0.5rem;">Mobile Ready</h4>
+            <p style="color: #C2185B; font-size: 0.85rem; margin: 0;">Works on any device</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 def show_excel_mode():
     """Handle Excel upload mode - existing functionality"""
     st.markdown("## 📁 Excel Upload Mode")
@@ -374,14 +585,90 @@ def show_excel_mode():
             logger.error(f"Excel processing error: {traceback.format_exc()}")
 
 def show_data_preview(data: Dict):
-    """Show preview of processed Excel data"""
-    st.markdown("### 📋 Data Preview")
+    """Show preview of processed Excel data with editing capability"""
+    st.markdown("### 📋 Data Preview & Modification")
 
-    # Title data preview
+    # Title data preview and editing
     if data.get('title_data'):
-        with st.expander("📄 Title Information", expanded=True):
-            title_df = pd.DataFrame([data['title_data']])
-            st.dataframe(title_df, hide_index=True, use_container_width=True)
+        with st.expander("📄 Title Information (Click to Edit)", expanded=True):
+            st.markdown("**✏️ Edit project information below:**")
+            
+            # Create editable form for title data
+            title_data = data['title_data'].copy()
+            
+            # Common title fields with user-friendly labels
+            title_fields = {
+                'Name of Work ;-': 'Project Name',
+                'Agreement No.': 'Contract/Agreement Number', 
+                'Reference to work order or Agreement :': 'Work Order Reference',
+                'Name of Contractor or supplier :': 'Contractor Name',
+                'Bill Number': 'Bill Number',
+                'Running or Final': 'Bill Type (Running/Final)',
+                'TENDER PREMIUM %': 'Tender Premium Percentage',
+                'WORK ORDER AMOUNT RS.': 'Work Order Amount (Rs.)',
+                'Date of written order to commence work :': 'Work Commencement Date',
+                'St. date of Start :': 'Start Date',
+                'St. date of completion :': 'Completion Date',
+                'Date of actual completion of work :': 'Actual Completion Date',
+                'Date of measurement :': 'Measurement Date'
+            }
+            
+            # Display current values from Excel and allow editing
+            col1, col2 = st.columns(2)
+            
+            modified_title_data = {}
+            
+            # Process known fields first
+            field_count = 0
+            for excel_key, friendly_label in title_fields.items():
+                if excel_key in title_data:
+                    current_value = str(title_data[excel_key]) if title_data[excel_key] is not None else ""
+                    
+                    # Alternate between columns
+                    target_col = col1 if field_count % 2 == 0 else col2
+                    
+                    with target_col:
+                        # Show original Excel value as help text
+                        new_value = st.text_input(
+                            friendly_label,
+                            value=current_value,
+                            help=f"Original Excel value: {current_value}",
+                            key=f"title_{excel_key}"
+                        )
+                        modified_title_data[excel_key] = new_value
+                    
+                    field_count += 1
+            
+            # Handle any additional fields from Excel not in the predefined list
+            other_fields = {k: v for k, v in title_data.items() if k not in title_fields}
+            if other_fields:
+                st.markdown("**📋 Additional Fields from Excel:**")
+                col3, col4 = st.columns(2)
+                
+                additional_count = 0
+                for key, value in other_fields.items():
+                    current_value = str(value) if value is not None else ""
+                    target_col = col3 if additional_count % 2 == 0 else col4
+                    
+                    with target_col:
+                        new_value = st.text_input(
+                            key,
+                            value=current_value,
+                            help=f"Additional field from Excel",
+                            key=f"title_extra_{key}"
+                        )
+                        modified_title_data[key] = new_value
+                    additional_count += 1
+            
+            # Update session state with modified data
+            st.session_state.title_data = modified_title_data
+            
+            # Show preview of modified data
+            if st.checkbox("📊 Show Current Title Data Summary", key="show_title_summary"):
+                summary_df = pd.DataFrame([
+                    {"Field": k, "Value": v} for k, v in modified_title_data.items() if v
+                ])
+                st.dataframe(summary_df, hide_index=True, use_container_width=True)
 
     # Work order preview
     work_order_data = data.get('work_order_data')
@@ -414,10 +701,15 @@ def show_data_preview(data: Dict):
             st.dataframe(extra_df, hide_index=True, use_container_width=True)
 
 def generate_documents_excel_mode(data: Dict):
-    """Generate documents using processed Excel data"""
+    """Generate documents using processed Excel data with modified title information"""
     try:
         with st.spinner("Generating documents..."):
-            # Initialize DocumentGenerator with data
+            # Use modified title data from session state if available
+            if hasattr(st.session_state, 'title_data') and st.session_state.title_data:
+                data['title_data'] = st.session_state.title_data
+                st.info("📝 Using your modified title information for document generation")
+            
+            # Initialize DocumentGenerator with updated data
             doc_generator = DocumentGenerator(data)
 
             # Generate HTML documents
@@ -527,6 +819,9 @@ def show_work_order_upload():
                         st.session_state.title_data = result.get('title_data')
                         st.session_state.work_order_data = result.get('work_order_data')
 
+                        # Show title editing interface
+                        show_title_editing_interface(result.get('title_data', {}))
+
                         # Show preview
                         show_work_order_preview()
 
@@ -541,6 +836,47 @@ def show_work_order_upload():
 
     else:  # Manual entry
         show_manual_title_entry()
+
+def show_title_editing_interface(title_data: Dict):
+    """Show title editing interface for online mode"""
+    if not title_data:
+        return
+        
+    with st.expander("📝 Edit Project Information", expanded=False):
+        st.markdown("**Modify the project information extracted from your Excel file:**")
+        
+        # Key fields for editing
+        key_fields = {
+            'Name of Work ;-': 'Project Name',
+            'Agreement No.': 'Contract Number', 
+            'Name of Contractor or supplier :': 'Contractor Name',
+            'Bill Number': 'Bill Number',
+            'Running or Final': 'Bill Type'
+        }
+        
+        modified_data = {}
+        col1, col2 = st.columns(2)
+        
+        field_count = 0
+        for excel_key, label in key_fields.items():
+            if excel_key in title_data:
+                current_value = str(title_data[excel_key]) if title_data[excel_key] is not None else ""
+                target_col = col1 if field_count % 2 == 0 else col2
+                
+                with target_col:
+                    new_value = st.text_input(
+                        label,
+                        value=current_value,
+                        key=f"online_title_{excel_key}"
+                    )
+                    modified_data[excel_key] = new_value
+                field_count += 1
+        
+        # Update session state with any modifications
+        if modified_data:
+            if not hasattr(st.session_state, 'title_data'):
+                st.session_state.title_data = {}
+            st.session_state.title_data.update(modified_data)
 
 def show_manual_title_entry():
     """Manual entry form for title and work order information"""
@@ -634,11 +970,11 @@ def show_work_order_preview():
             st.dataframe(work_df, hide_index=True, use_container_width=True)
 
 def show_bill_quantity_entry():
-    """Step 2: Enter bill quantities for work items"""
+    """Step 2: Enter bill quantities for work items - Scrollable table format"""
     st.markdown("""
     <div class="form-section">
-        <h3>💰 Step 2: Enter Bill Quantities</h3>
-        <p>Enter quantities for each work item in your order.</p>
+        <h3>💰 Step 2: Fill Bill Quantities</h3>
+        <p>Review work order items with rates below. Scroll through all items and fill quantities for your bill.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -650,121 +986,326 @@ def show_bill_quantity_entry():
         return
 
     # Initialize quantities if not exists
-    if 'quantities' not in st.session_state:
-        st.session_state.quantities = {}
+    if 'bill_quantities' not in st.session_state:
+        st.session_state.bill_quantities = {}
 
-    # Bill quantity entry form
-    st.markdown("### 📊 Enter Quantities")
+    # Convert work order data to DataFrame if it's a list
+    if isinstance(st.session_state.work_order_data, list):
+        work_df = pd.DataFrame(st.session_state.work_order_data)
+    else:
+        work_df = st.session_state.work_order_data.copy()
 
+    # Calculate progress
+    total_items = len(work_df)
+    filled_items = len([k for k, v in st.session_state.bill_quantities.items() if v > 0])
+    progress_percentage = (filled_items / total_items * 100) if total_items > 0 else 0
+    
+    # Progress indicator
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: center;">
+        📊 <strong>Bill Entry Progress:</strong> {filled_items}/{total_items} items filled ({progress_percentage:.1f}% complete)
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Enhanced scrollable work order items table
+    st.markdown("### 📋 Work Order Items & Rates")
+    st.markdown("**Instructions:** Scroll through the items below and enter quantities for billing.")
+    
     total_amount = 0.0
     bill_data = []
-
-    for i, item in enumerate(st.session_state.work_order_data):
-        st.markdown(f"#### Item {i+1}: {item.get('item_description', 'Unknown Item')}")
-
-        col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-
-        with col1:
-            st.markdown(f"**Description:** {item.get('item_description', 'N/A')}")
-
-        with col2:
-            st.markdown(f"**Unit:** {item.get('unit', 'N/A')}")
-
-        with col3:
-            st.markdown(f"**Rate:** ₹{item.get('rate', 0):,.2f}")
-
-        with col4:
-            quantity_key = f"qty_{i}"
-            quantity = st.number_input(
-                "Quantity",
+    
+    # Custom CSS for enhanced table styling
+    st.markdown("""
+    <style>
+    .work-order-table-container {
+        max-height: 600px;
+        overflow-y: auto;
+        border: 2px solid #e1e5e9;
+        border-radius: 10px;
+        background: #f8f9fa;
+        margin: 20px 0;
+    }
+    .work-order-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    .work-order-table th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 8px;
+        text-align: left;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 2px solid #5a67d8;
+    }
+    .work-order-table td {
+        padding: 12px 8px;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: top;
+    }
+    .work-order-table tr:hover {
+        background-color: #f7fafc;
+    }
+    .item-row {
+        border-left: 4px solid #667eea;
+    }
+    .item-description {
+        font-weight: 500;
+        color: #2d3748;
+        line-height: 1.4;
+    }
+    .wo-qty-info {
+        font-size: 0.85em;
+        color: #718096;
+        font-style: italic;
+    }
+    .rate-display {
+        font-weight: bold;
+        color: #2b6cb0;
+        font-size: 1.05em;
+    }
+    .amount-cell {
+        font-weight: bold;
+        color: #28a745;
+        font-size: 1.1em;
+        text-align: right;
+    }
+    .qty-input-cell {
+        width: 120px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Create scrollable table
+    st.markdown('<div class="work-order-table-container">', unsafe_allow_html=True)
+    
+    # Table header
+    st.markdown("""
+    <table class="work-order-table">
+        <thead>
+            <tr>
+                <th style="width: 8%;">Item No.</th>
+                <th style="width: 35%;">Description & WO Qty</th>
+                <th style="width: 8%;">Unit</th>
+                <th style="width: 12%;">Rate (₹)</th>
+                <th style="width: 15%;">Bill Quantity</th>
+                <th style="width: 12%;">Amount (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+    """, unsafe_allow_html=True)
+    
+    # Process each work order item in table rows
+    for idx, (i, row) in enumerate(work_df.iterrows()):
+        # Extract item details safely
+        item_no = str(row.get('Item No.', row.get('Item', f'Item_{idx + 1}')))
+        description = str(row.get('Description', row.get('item_description', 'No description')))
+        unit = str(row.get('Unit', row.get('unit', 'Unit')))
+        
+        # Safely convert to float
+        try:
+            rate_value = row.get('Rate', row.get('rate', 0))
+            rate = float(rate_value) if rate_value is not None else 0.0
+        except (ValueError, TypeError):
+            rate = 0.0
+            
+        try:
+            wo_qty_value = row.get('Quantity Since', row.get('Quantity', 0))
+            work_order_qty = float(wo_qty_value) if wo_qty_value is not None else 0.0
+        except (ValueError, TypeError):
+            work_order_qty = 0.0
+        
+        # Quantity input key
+        qty_key = f"bill_qty_{idx}_{item_no}"
+        
+        # Current quantity from session state
+        current_qty = st.session_state.bill_quantities.get(qty_key, 0.0)
+        
+        # Create table row with embedded Streamlit components
+        st.markdown(f"""
+        <tr class="item-row">
+            <td><strong>{item_no}</strong></td>
+            <td>
+                <div class="item-description">{description}</div>
+                <div class="wo-qty-info">📋 WO Qty: {work_order_qty:,.2f} {unit}</div>
+            </td>
+            <td><strong>{unit}</strong></td>
+            <td class="rate-display">₹{rate:,.2f}</td>
+            <td class="qty-input-cell">
+        """, unsafe_allow_html=True)
+        
+        # Quantity input using Streamlit number_input in table cell
+        col_qty, col_amount = st.columns([1, 1])
+        
+        with col_qty:
+            bill_qty = st.number_input(
+                label="Quantity",
                 min_value=0.0,
-                value=st.session_state.quantities.get(quantity_key, 0.0),
+                value=current_qty,
                 step=0.01,
-                key=quantity_key,
-                help=f"Enter quantity for {item.get('item_description', 'item')}"
+                key=qty_key,
+                label_visibility="collapsed",
+                help=f"Enter quantity to bill for {description[:30]}..."
             )
-            st.session_state.quantities[quantity_key] = quantity
-
+            # Update session state
+            st.session_state.bill_quantities[qty_key] = bill_qty
+        
         # Calculate amount
-        rate = item.get('rate', 0)
-        amount = quantity * rate
+        amount = bill_qty * rate
         total_amount += amount
-
-        # Add to bill data
-        bill_data.append({
-            'item_description': item.get('item_description'),
-            'unit': item.get('unit'),
-            'rate': rate,
-            'quantity': quantity,
-            'amount': amount
-        })
-
-        # Show amount for this item
-        if quantity > 0:
-            st.markdown(f"💰 **Amount:** ₹{amount:,.2f}")
-
-        st.markdown("---")
-
-    # Summary
-    st.markdown("### 📈 Bill Summary")
-
+        
+        with col_amount:
+            if bill_qty > 0:
+                st.markdown(f'<div class="amount-cell">₹{amount:,.2f}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="amount-cell">₹0.00</div>', unsafe_allow_html=True)
+        
+        st.markdown("</td></tr>", unsafe_allow_html=True)
+        
+        # Add to bill data if quantity > 0
+        if bill_qty > 0:
+            bill_data.append({
+                'item_no': item_no,
+                'description': description,
+                'unit': unit,
+                'rate': rate,
+                'work_order_qty': work_order_qty,
+                'bill_qty': bill_qty,
+                'amount': amount
+            })
+    
+    # Close table
+    st.markdown("""
+        </tbody>
+    </table>
+    </div>
+    """)
+    
+    # Summary section with enhanced styling
+    st.markdown("### 📊 Bill Summary")
+    
     col1, col2, col3 = st.columns(3)
-
+    
     with col1:
-        total_items = len([item for item in bill_data if item['quantity'] > 0])
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{total_items}</div>
-            <div class="metric-label">Items with Quantities</div>
-        </div>
-        """, unsafe_allow_html=True)
-
+        items_with_qty = len(bill_data)
+        st.metric("Items to Bill", items_with_qty, help="Number of items with quantities entered")
+    
     with col2:
-        total_qty = sum(item['quantity'] for item in bill_data)
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{total_qty:,.2f}</div>
-            <div class="metric-label">Total Quantity</div>
-        </div>
-        """, unsafe_allow_html=True)
-
+        total_qty = sum(item['bill_qty'] for item in bill_data)
+        st.metric("Total Quantity", f"{total_qty:,.2f}", help="Sum of all bill quantities")
+    
     with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">₹{total_amount:,.2f}</div>
-            <div class="metric-label">Total Amount</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric("Total Amount", f"₹{total_amount:,.2f}", help="Total bill amount", delta=None)
 
-    # Store bill quantities
-    st.session_state.bill_quantities = bill_data
+    # Show detailed bill table if there are items with quantities
+    if bill_data:
+        st.markdown("### 📝 Items to be Billed - Summary")
+        
+        # Create display dataframe
+        display_df = pd.DataFrame(bill_data)
+        display_df = display_df.rename(columns={
+            'item_no': 'Item No.',
+            'description': 'Description',
+            'unit': 'Unit',
+            'work_order_qty': 'WO Qty',
+            'bill_qty': 'Bill Qty',
+            'rate': 'Rate (₹)',
+            'amount': 'Amount (₹)'
+        })
+        
+        # Format numeric columns
+        display_df['Rate (₹)'] = display_df['Rate (₹)'].apply(lambda x: f"₹{x:,.2f}")
+        display_df['Amount (₹)'] = display_df['Amount (₹)'].apply(lambda x: f"₹{x:,.2f}")
+        display_df['WO Qty'] = display_df['WO Qty'].apply(lambda x: f"{x:,.2f}")
+        display_df['Bill Qty'] = display_df['Bill Qty'].apply(lambda x: f"{x:,.2f}")
+        
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
+        
+        # Store processed bill data
+        st.session_state.processed_bill_data = bill_data
+        
+        # Success message
+        st.success(f"✅ Ready to proceed! {len(bill_data)} items prepared for billing.")
+    else:
+        st.info("💡 Enter quantities for work items above to see the bill summary.")
 
-    # Show detailed table
-    if total_amount > 0:
-        st.markdown("### 📋 Detailed Bill")
-        bill_df = pd.DataFrame(bill_data)
-        bill_df = bill_df[bill_df['quantity'] > 0]  # Show only items with quantities
+    # Navigation buttons with enhanced styling
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("⬅️ Back to Work Order", key="back_to_wo", use_container_width=True):
+            st.session_state.step = 1
+            st.rerun()
+    
+    with col2:
+        if total_amount > 0:
+            if st.button("➡️ Proceed to Extra Items", key="proceed_to_extra", use_container_width=True, type="primary"):
+                st.session_state.step = 3
+                st.rerun()
+        else:
+            st.button("⚠️ Enter quantities to proceed", disabled=True, use_container_width=True, help="Enter quantities for at least one item to proceed")
 
-        # Format the dataframe for display
-        if len(bill_df) > 0:
-            display_df = bill_df.copy()
-            display_df['rate'] = display_df['rate'].apply(lambda x: f"₹{x:,.2f}")
-            display_df['amount'] = display_df['amount'].apply(lambda x: f"₹{x:,.2f}")
-            display_df['quantity'] = display_df['quantity'].apply(lambda x: f"{x:,.2f}")
+    # Summary section
+    st.markdown("### 📊 Bill Summary")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        items_with_qty = len(bill_data)
+        st.metric("Items to Bill", items_with_qty)
+    
+    with col2:
+        total_qty = sum(item['bill_qty'] for item in bill_data)
+        st.metric("Total Quantity", f"{total_qty:,.2f}")
+    
+    with col3:
+        st.metric("Total Amount", f"₹{total_amount:,.2f}")
 
-            st.dataframe(display_df, hide_index=True, use_container_width=True)
+    # Show detailed bill table if there are items with quantities
+    if bill_data:
+        st.markdown("### 📄 Items to be Billed")
+        
+        # Create display dataframe
+        display_df = pd.DataFrame(bill_data)
+        display_df = display_df.rename(columns={
+            'item_no': 'Item No.',
+            'description': 'Description',
+            'unit': 'Unit',
+            'work_order_qty': 'WO Qty',
+            'bill_qty': 'Bill Qty',
+            'rate': 'Rate (₹)',
+            'amount': 'Amount (₹)'
+        })
+        
+        # Format numeric columns
+        display_df['Rate (₹)'] = display_df['Rate (₹)'].apply(lambda x: f"₹{x:,.2f}")
+        display_df['Amount (₹)'] = display_df['Amount (₹)'].apply(lambda x: f"₹{x:,.2f}")
+        display_df['WO Qty'] = display_df['WO Qty'].apply(lambda x: f"{x:,.2f}")
+        display_df['Bill Qty'] = display_df['Bill Qty'].apply(lambda x: f"{x:,.2f}")
+        
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
+        
+        # Store processed bill data
+        st.session_state.processed_bill_data = bill_data
+    else:
+        st.info("💡 Enter quantities for work items to see the bill summary.")
 
     # Navigation buttons
     col1, col2 = st.columns(2)
-
+    
     with col1:
-        if st.button("⬅️ Back to Work Order"):
+        if st.button("⬅️ Back to Work Order", key="back_to_wo"):
             st.session_state.step = 1
             st.rerun()
-
+    
     with col2:
         if total_amount > 0:
-            if st.button("➡️ Proceed to Extra Items"):
+            if st.button("➡️ Proceed to Extra Items", key="proceed_to_extra"):
                 st.session_state.step = 3
                 st.rerun()
         else:
@@ -959,17 +1500,22 @@ def generate_documents_online_mode():
             # Prepare data in the format expected by DocumentGenerator
 
             # Filter bill quantities to include only items with quantities > 0
-            bill_quantity_data = [
+            bill_quantity_items = [
                 item for item in st.session_state.bill_quantities 
                 if item.get('quantity', 0) > 0
             ]
+            
+            # Convert list data to DataFrames as expected by DocumentGenerator
+            work_order_df = pd.DataFrame(st.session_state.work_order_data) if st.session_state.work_order_data else pd.DataFrame()
+            bill_quantity_df = pd.DataFrame(bill_quantity_items) if bill_quantity_items else pd.DataFrame()
+            extra_items_df = pd.DataFrame(st.session_state.extra_items) if st.session_state.extra_items else pd.DataFrame()
 
-            # Prepare data in DocumentGenerator format
+            # Prepare data in DocumentGenerator format with proper DataFrames
             online_data = {
                 'title_data': st.session_state.title_data,
-                'work_order_data': st.session_state.work_order_data,
-                'bill_quantity_data': bill_quantity_data,
-                'extra_items_data': st.session_state.extra_items
+                'work_order_data': work_order_df,
+                'bill_quantity_data': bill_quantity_df,
+                'extra_items_data': extra_items_df
             }
             
             # Initialize DocumentGenerator
@@ -1026,13 +1572,13 @@ def generate_documents_online_mode():
                         provide_download_link(generated_files[0], "Bill_Document.pdf", "online_single")
 
                     # Success message with summary
-                    total_amount = sum(item.get('amount', 0) for item in bill_quantity_data) + sum(item.get('amount', 0) for item in st.session_state.extra_items)
+                    total_amount = sum(item.get('amount', 0) for item in bill_quantity_items) + sum(item.get('amount', 0) for item in st.session_state.extra_items)
 
                     st.balloons()
                     st.success(f"""
                     🎉 **Documents Generated Successfully!**
 
-                    - **Total Items:** {len(bill_quantity_data) + len(st.session_state.extra_items)}
+                    - **Total Items:** {len(bill_quantity_items) + len(st.session_state.extra_items)}
                     - **Total Amount:** ₹{total_amount:,.2f}
                     - **Generated Files:** {len(generated_files)}
                     """)
@@ -1045,7 +1591,7 @@ def generate_documents_online_mode():
         st.error(f"❌ Error generating documents: {str(e)}")
         logger.error(f"Online document generation error: {traceback.format_exc()}")
 
-def provide_download_link(file_path: str, file_name: str, key: str = None):
+def provide_download_link(file_path: str, file_name: str, key: str = ""):
     """Provide download link for generated file"""
     try:
         if os.path.exists(file_path):
