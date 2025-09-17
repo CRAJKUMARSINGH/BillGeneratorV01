@@ -1,0 +1,22 @@
+# Reduce Cursor indexing for better performance
+GENERATED_FILES/
+output_*/
+clean_output_*/
+readability_test_output/
+Sample_Output/
+
+# Large HTML/PDF artifacts
+*.html
+*.pdf
+*.zip
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Caches and binaries
+__pycache__/
+*.pyc
+
+# Node modules (if present)
+node_modules/
