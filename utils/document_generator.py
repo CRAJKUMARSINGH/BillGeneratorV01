@@ -782,20 +782,29 @@ class DocumentGenerator:
         """
         
         total_amount = 0
-        for index, row in self.bill_quantity_data.iterrows():
-            quantity = self._safe_float(row.get('Quantity', 0))
-            rate = self._safe_float(row.get('Rate', 0))
-            amount = quantity * rate
-            total_amount += amount
-            
-            html_content += f"""
+        # Check if bill_quantity_data is a valid DataFrame before iterating
+        if isinstance(self.bill_quantity_data, pd.DataFrame) and not self.bill_quantity_data.empty:
+            for index, row in self.bill_quantity_data.iterrows():
+                quantity = self._safe_float(row.get('Quantity', 0))
+                rate = self._safe_float(row.get('Rate', 0))
+                amount = quantity * rate
+                total_amount += amount
+                
+                html_content += f"""
+                        <tr>
+                            <td>{self._safe_serial_no(row.get('Item No.', row.get('Item', '')))}</td>
+                            <td>{row.get('Description', '')}</td>
+                            <td>{self._format_unit_or_text(row.get('Unit', ''))}</td>
+                            <td class="amount">{self._format_number(quantity)}</td>
+                            <td class="amount">{self._format_number(rate)}</td>
+                            <td class="amount">{self._format_number(amount)}</td>
+                        </tr>
+                """
+        else:
+            # Handle case when bill_quantity_data is empty or not a DataFrame
+            html_content += """
                     <tr>
-                        <td>{self._safe_serial_no(row.get('Item No.', row.get('Item', '')))}</td>
-                        <td>{row.get('Description', '')}</td>
-                        <td>{self._format_unit_or_text(row.get('Unit', ''))}</td>
-                        <td class="amount">{self._format_number(quantity)}</td>
-                        <td class="amount">{self._format_number(rate)}</td>
-                        <td class="amount">{self._format_number(amount)}</td>
+                        <td colspan="6">No bill quantity data available</td>
                     </tr>
             """
         

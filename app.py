@@ -1575,7 +1575,13 @@ def generate_documents_online_mode():
                 })
             
             # Convert list data to DataFrames as expected by DocumentGenerator
-            work_order_df = pd.DataFrame(st.session_state.work_order_data) if st.session_state.work_order_data else pd.DataFrame()
+            if isinstance(st.session_state.get('work_order_data'), pd.DataFrame):
+                work_order_df = st.session_state['work_order_data'].copy()
+            elif st.session_state.get('work_order_data') is not None:
+                work_order_df = pd.DataFrame(st.session_state['work_order_data'])
+            else:
+                work_order_df = pd.DataFrame()
+
             bill_quantity_df = pd.DataFrame(bill_quantity_items) if bill_quantity_items else pd.DataFrame()
             # Normalize extra items columns
             # FIXED to prevent 'str' object has no attribute 'get' error
