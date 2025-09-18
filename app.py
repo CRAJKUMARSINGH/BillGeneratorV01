@@ -1052,14 +1052,20 @@ def show_bill_quantity_entry():
     if 'bill_quantities' not in st.session_state:
         st.session_state.bill_quantities = {}
 
-    # Convert work order data to DataFrame if it's a list
-    if isinstance(st.session_state.work_order_data, list):
+    # Convert work order data to DataFrame if it's a list or dict
+    if isinstance(st.session_state.work_order_data, (list, dict)):
         work_df = pd.DataFrame(st.session_state.work_order_data)
-    else:
+    elif hasattr(st.session_state.work_order_data, 'copy'):
         work_df = st.session_state.work_order_data.copy()
+    else:
+        work_df = pd.DataFrame()
+
+    # Removed filter to display all items including zero-rate items
+    # This was causing issues where users couldn't enter quantities for zero-rate items
+    pass
 
     # Calculate progress
-    total_items = len(work_df)
+    total_items = len(work_df) if hasattr(work_df, '__len__') else 0
     filled_items = len([k for k, v in st.session_state.bill_quantities.items() if v > 0])
     progress_percentage = (filled_items / total_items * 100) if total_items > 0 else 0
     
@@ -1163,15 +1169,33 @@ def show_bill_quantity_entry():
     """, unsafe_allow_html=True)
     
     # Process each work order item in table rows
+    # Ensure work_df is a DataFrame before iterating
+    if not isinstance(work_df, pd.DataFrame):
+        work_df = pd.DataFrame(work_df)
+    
     for idx, (i, row) in enumerate(work_df.iterrows()):
-        # Extract item details safely
-        item_no = str(row.get('Item No.', row.get('Item', f'Item_{idx + 1}')))
-        description = str(row.get('Description', row.get('item_description', 'No description')))
-        unit = str(row.get('Unit', row.get('unit', 'Unit')))
+        # Extract item details safely - FIXED to prevent 'str' object has no attribute 'get' error
+        # First try to get 'Item No.', if not found try 'Item', if neither found use default
+        item_no_value = row.get('Item No.')
+        if item_no_value is None:
+            item_no_value = row.get('Item', f'Item_{idx + 1}')
+        item_no = str(item_no_value)
+        
+        # First try to get 'Description', if not found try 'item_description', if neither found use default
+        description_value = row.get('Description')
+        if description_value is None:
+            description_value = row.get('item_description', 'No description')
+        description = str(description_value)
+        
+        # First try to get 'Unit', if not found try 'unit', if neither found use default
+        unit_value = row.get('Unit')
+        if unit_value is None:
+            unit_value = row.get('unit', 'Unit')
+        unit = str(unit_value)
         
         # Safely convert to float
         try:
-            rate_value = row.get('Rate', row.get('rate', 0))
+            rate_value = row.get('Rate', row.get('rate', row.get('RATE', 0)))
             rate = float(rate_value) if rate_value is not None else 0.0
         except (ValueError, TypeError):
             rate = 0.0
@@ -1266,7 +1290,7 @@ def show_bill_quantity_entry():
 
     # Show detailed bill table if there are items with quantities
     if bill_data:
-        st.markdown("### 📝 Items to be Billed - Summary")
+        st.markdown("### 📄 Items to be Billed")
         
         # Create display dataframe
         display_df = pd.DataFrame(bill_data)
@@ -1296,23 +1320,6 @@ def show_bill_quantity_entry():
     else:
         st.info("💡 Enter quantities for work items above to see the bill summary.")
 
-    # Navigation buttons with enhanced styling
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("⬅️ Back to Work Order", key="back_to_wo", use_container_width=True):
-            st.session_state.step = 1
-            st.rerun()
-    
-    with col2:
-        if total_amount > 0:
-            if st.button("➡️ Proceed to Extra Items", key="proceed_to_extra", use_container_width=True, type="primary"):
-                st.session_state.step = 3
-                st.rerun()
-        else:
-            st.button("⚠️ Enter quantities to proceed", disabled=True, use_container_width=True, help="Enter quantities for at least one item to proceed")
-
     # Summary section
     st.markdown("### 📊 Bill Summary")
     
@@ -1329,35 +1336,6 @@ def show_bill_quantity_entry():
     with col3:
         st.metric("Total Amount", f"₹{total_amount:,.2f}")
 
-    # Show detailed bill table if there are items with quantities
-    if bill_data:
-        st.markdown("### 📄 Items to be Billed")
-        
-        # Create display dataframe
-        display_df = pd.DataFrame(bill_data)
-        display_df = display_df.rename(columns={
-            'item_no': 'Item No.',
-            'description': 'Description',
-            'unit': 'Unit',
-            'work_order_qty': 'WO Qty',
-            'bill_qty': 'Bill Qty',
-            'rate': 'Rate (₹)',
-            'amount': 'Amount (₹)'
-        })
-        
-        # Format numeric columns
-        display_df['Rate (₹)'] = display_df['Rate (₹)'].apply(lambda x: f"₹{x:,.2f}")
-        display_df['Amount (₹)'] = display_df['Amount (₹)'].apply(lambda x: f"₹{x:,.2f}")
-        display_df['WO Qty'] = display_df['WO Qty'].apply(lambda x: f"{x:,.2f}")
-        display_df['Bill Qty'] = display_df['Bill Qty'].apply(lambda x: f"{x:,.2f}")
-        
-        st.dataframe(display_df, hide_index=True, use_container_width=True)
-        
-        # Store processed bill data
-        st.session_state.processed_bill_data = bill_data
-    else:
-        st.info("💡 Enter quantities for work items to see the bill summary.")
-
     # Navigation buttons
     col1, col2 = st.columns(2)
     
@@ -1367,7 +1345,9 @@ def show_bill_quantity_entry():
             st.rerun()
     
     with col2:
-        if total_amount > 0:
+        # Check if at least one item has a quantity entered, regardless of rate value
+        has_quantities = any(item.get('bill_qty', 0) > 0 for item in bill_data)
+        if has_quantities:
             if st.button("➡️ Proceed to Extra Items", key="proceed_to_extra_2"):
                 st.session_state.step = 3
                 st.rerun()
@@ -1475,9 +1455,18 @@ def show_document_generation():
     # Final summary
     st.markdown("### 📊 Final Summary")
 
-    # Calculate totals
-    bill_total = sum(item.get('amount', 0) for item in st.session_state.bill_quantities if item.get('quantity', 0) > 0)
-    extra_total = sum(item.get('amount', 0) for item in st.session_state.extra_items)
+    # Calculate totals using structured processed data
+    processed_items = st.session_state.get('processed_bill_data', []) or []
+    extra_items_list = st.session_state.get('extra_items', []) or []
+
+    try:
+        bill_total = sum(float(item.get('amount', 0) or 0) for item in processed_items)
+    except Exception:
+        bill_total = 0.0
+    try:
+        extra_total = sum(float(item.get('amount', 0) or 0) for item in extra_items_list)
+    except Exception:
+        extra_total = 0.0
     grand_total = bill_total + extra_total
 
     # Summary metrics
@@ -1486,7 +1475,7 @@ def show_document_generation():
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">{len([item for item in st.session_state.bill_quantities if item.get('quantity', 0) > 0])}</div>
+            <div class="metric-value">{len([item for item in st.session_state.bill_quantities.values() if isinstance(item, dict) and item.get('quantity', 0) > 0])}</div>
             <div class="metric-label">Bill Items</div>
         </div>
         """, unsafe_allow_html=True)
@@ -1524,7 +1513,7 @@ def show_document_generation():
             st.dataframe(title_df, hide_index=True, use_container_width=True)
 
     with tab2:
-        bill_items = [item for item in st.session_state.bill_quantities if item.get('quantity', 0) > 0]
+        bill_items = processed_items
         if bill_items:
             bill_df = pd.DataFrame(bill_items)
             st.dataframe(bill_df, hide_index=True, use_container_width=True)
@@ -1562,16 +1551,77 @@ def generate_documents_online_mode():
         with st.spinner("Generating documents..."):
             # Prepare data in the format expected by DocumentGenerator
 
-            # Filter bill quantities to include only items with quantities > 0
-            bill_quantity_items = [
-                item for item in st.session_state.bill_quantities 
-                if item.get('quantity', 0) > 0
-            ]
+            # Use processed items prepared in Step 2 (each is a dict with item_no, description, unit, bill_qty, rate, amount)
+            processed_items = st.session_state.get('processed_bill_data', []) or []
+            # Map to DocumentGenerator-friendly bill quantity structure
+            # FIXED to prevent 'str' object has no attribute 'get' error
+            bill_quantity_items = []
+            for it in processed_items:
+                # Safely extract values to prevent AttributeError
+                item_no = it.get('item_no', '')
+                description = it.get('description', '')
+                unit = it.get('unit', '')
+                bill_qty = it.get('bill_qty', 0)
+                rate = it.get('rate', 0)
+                amount = it.get('amount', 0)
+                
+                bill_quantity_items.append({
+                    'Item No.': item_no,
+                    'Description': description,
+                    'Unit': unit,
+                    'Quantity': bill_qty,
+                    'Rate': rate,
+                    'Amount': amount
+                })
             
             # Convert list data to DataFrames as expected by DocumentGenerator
             work_order_df = pd.DataFrame(st.session_state.work_order_data) if st.session_state.work_order_data else pd.DataFrame()
             bill_quantity_df = pd.DataFrame(bill_quantity_items) if bill_quantity_items else pd.DataFrame()
-            extra_items_df = pd.DataFrame(st.session_state.extra_items) if st.session_state.extra_items else pd.DataFrame()
+            # Normalize extra items columns
+            # FIXED to prevent 'str' object has no attribute 'get' error
+            extra_items_list = st.session_state.get('extra_items', []) or []
+            extra_items_norm = []
+            for ex in extra_items_list:
+                # Safely extract values to prevent AttributeError
+                item_no_value = ex.get('item_no')
+                if item_no_value is None:
+                    item_no_value = ex.get('Item No.', '')
+                item_no = item_no_value
+                
+                description_value = ex.get('description')
+                if description_value is None:
+                    description_value = ex.get('Description', '')
+                description = description_value
+                
+                unit_value = ex.get('unit')
+                if unit_value is None:
+                    unit_value = ex.get('Unit', '')
+                unit = unit_value
+                
+                quantity_value = ex.get('quantity')
+                if quantity_value is None:
+                    quantity_value = ex.get('Quantity', 0)
+                quantity = quantity_value
+                
+                rate_value = ex.get('rate')
+                if rate_value is None:
+                    rate_value = ex.get('Rate', 0)
+                rate = rate_value
+                
+                amount_value = ex.get('amount')
+                if amount_value is None:
+                    amount_value = ex.get('Amount', 0)
+                amount = amount_value
+                
+                extra_items_norm.append({
+                    'Item No.': item_no,
+                    'Description': description,
+                    'Unit': unit,
+                    'Quantity': quantity,
+                    'Rate': rate,
+                    'Amount': amount
+                })
+            extra_items_df = pd.DataFrame(extra_items_norm) if extra_items_norm else pd.DataFrame()
 
             # Prepare data in DocumentGenerator format with proper DataFrames
             online_data = {
@@ -1635,7 +1685,27 @@ def generate_documents_online_mode():
                         provide_download_link(generated_files[0], "Bill_Document.pdf", "online_single")
 
                     # Success message with summary
-                    total_amount = sum(item.get('amount', 0) for item in bill_quantity_items) + sum(item.get('amount', 0) for item in st.session_state.extra_items)
+                    # FIXED to prevent 'str' object has no attribute 'get' error
+                    total_bill_amount = 0
+                    for item in bill_quantity_items:
+                        amount_value = item.get('Amount', 0)
+                        try:
+                            total_bill_amount += float(amount_value or 0)
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    total_extra_amount = 0
+                    for item in extra_items_norm:
+                        # Safely get amount value
+                        amount_value = item.get('Amount')
+                        if amount_value is None:
+                            amount_value = item.get('amount', 0)
+                        try:
+                            total_extra_amount += float(amount_value or 0)
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    total_amount = total_bill_amount + total_extra_amount
 
                     st.balloons()
                     st.success(f"""

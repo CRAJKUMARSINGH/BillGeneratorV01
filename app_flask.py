@@ -11,6 +11,7 @@ from utils.document_generator import DocumentGenerator
 from utils.pdf_merger import PDFMerger
 from utils.zip_packager import ZipPackager
 import gc
+import pandas as pd
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this-in-production'
@@ -202,7 +203,7 @@ def process_quantities():
         
         for index, rate in rates.items():
             if index < len(work_order_data):
-                original_rate = work_order_data[index].get('Rate', 0)
+                original_rate = work_order_data[index].get('Rate', work_order_data[index].get('rate', 0))
                 if rate > original_rate:
                     validation_errors.append(f"Item {index + 1}: Rate {rate} exceeds work order rate {original_rate}")
         

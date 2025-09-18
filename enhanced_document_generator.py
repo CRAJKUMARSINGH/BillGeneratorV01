@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+"""
+Enhanced Document Generator with Fixed HTML-to-PDF Conversion
+Implements all the critical fixes for PDF distortion issues
+"""
+
 import pandas as pd
 import gc
 from datetime import datetime
@@ -7,9 +13,10 @@ from functools import lru_cache
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 import os
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
-class DocumentGenerator:
-    """Generates various billing documents from processed Excel data using Jinja2 templates"""
+class EnhancedDocumentGenerator:
+    """Enhanced document generator with fixed HTML-to-PDF conversion"""
     
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -128,7 +135,7 @@ class DocumentGenerator:
             total_amount += amount
             
             work_items.append({
-                'unit': row.get('Unit', ''),
+                'unit': self._format_unit_or_text(row.get('Unit', '')),
                 'quantity_since': quantity_since,
                 'quantity_upto': self._safe_float(row.get('Quantity Upto', quantity_since)),
                 'item_no': self._safe_serial_no(row.get('Item No.', row.get('Item', ''))),
@@ -151,7 +158,7 @@ class DocumentGenerator:
                 extra_total += amount
                 
                 extra_items.append({
-                    'unit': row.get('Unit', ''),
+                    'unit': self._format_unit_or_text(row.get('Unit', '')),
                     'quantity': quantity,
                     'item_no': self._safe_serial_no(row.get('Item No.', row.get('Item', ''))),
                     'description': row.get('Description', ''),
@@ -263,9 +270,9 @@ class DocumentGenerator:
             print(f"Failed to render template {template_name}: {e}")
             raise
     
-    def create_pdf_documents(self, documents: Dict[str, str]) -> Dict[str, bytes]:
+    def create_pdf_documents_fixed(self, documents: Dict[str, str]) -> Dict[str, bytes]:
         """
-        Convert HTML documents to PDF format with improved margin handling and timeout controls
+        FIXED: Convert HTML documents to PDF with proper formatting and no distortion
         
         Args:
             documents: Dictionary of HTML documents
@@ -273,94 +280,89 @@ class DocumentGenerator:
         Returns:
             Dictionary of PDF documents as bytes
         """
-        import signal
-        import threading
-        from concurrent.futures import ThreadPoolExecutor, TimeoutError
-        
         pdf_files = {}
 
         # Initialize PDF engines with better error handling
-        render_with_weasy = None  # type: ignore
-        render_with_xhtml2pdf = None  # type: ignore
+        render_with_weasy = None
+        render_with_xhtml2pdf = None
+        render_with_playwright = None
         
-        # Try WeasyPrint with timeout protection
+        # Try WeasyPrint with timeout protection (RECOMMENDED)
         try:
-            from weasyprint import HTML, CSS  # type: ignore
+            from weasyprint import HTML, CSS
             def render_with_weasy(html_str: str) -> bytes:
-                # WeasyPrint handles @page margins properly but can hang
+                # Enhanced WeasyPrint with proper CSS
                 try:
+                    # Add print-specific CSS to prevent distortion
+                    enhanced_html = self._add_print_css(html_str)
+                    
                     # Use ThreadPoolExecutor with timeout to prevent hanging
                     with ThreadPoolExecutor(max_workers=1) as executor:
-                        future = executor.submit(lambda: HTML(string=html_str, base_url=".").write_pdf())
-                        return future.result(timeout=30)  # 30 second timeout
+                        future = executor.submit(lambda: HTML(string=enhanced_html, base_url=".").write_pdf())
+                        return future.result(timeout=45)  # 45 second timeout
                 except Exception as e:
                     raise Exception(f"WeasyPrint timeout or error: {str(e)}")
-        except Exception:
+            render_with_weasy = render_with_weasy
+        except ImportError:
             render_with_weasy = None
             
-        # Fallback to xhtml2pdf
+        # Fallback to xhtml2pdf with enhanced options
         try:
-            from xhtml2pdf import pisa  # type: ignore
+            from xhtml2pdf import pisa
             import io as _io
             def render_with_xhtml2pdf(html_str: str) -> bytes:
-                # xhtml2pdf is more reliable but less feature-rich
-                # Clean HTML for better compatibility
-                clean_html = html_str
-                # Convert mm units to px for xhtml2pdf
-                import re
-                clean_html = re.sub(r'(\d+(?:\.\d+)?)mm', lambda m: f"{float(m.group(1)) * 3.78:.0f}px", clean_html)
-                # Remove problematic CSS properties but KEEP table-layout for width consistency
-                clean_html = clean_html.replace('box-sizing: border-box;', '')
-                # Keep table-layout: fixed for width consistency - CRITICAL for table widths
-                # clean_html = clean_html.replace('table-layout: fixed;', '')
-                clean_html = clean_html.replace('break-inside: avoid;', '')
+                # Enhanced xhtml2pdf with proper options to prevent distortion
+                clean_html = self._enhance_html_for_pdf(html_str)
                 
                 output = _io.BytesIO()
                 result = pisa.CreatePDF(
                     src=clean_html, 
                     dest=output, 
                     encoding="utf-8",
-                    default_css=None,
-                    link_callback=None
+                    print_media=True,  # CRITICAL: Uses print CSS
+                    disable_smart_shrinking=True,  # Prevents unwanted scaling
+                    dpi=300,  # High quality
+                    raise_exception=False
                 )
                 if hasattr(result, 'err') and result.err:
                     raise Exception(f"xhtml2pdf error: {result.err}")
                 return output.getvalue()
-        except Exception:
+            render_with_xhtml2pdf = render_with_xhtml2pdf
+        except ImportError:
             render_with_xhtml2pdf = None
 
         # Process each document with robust error handling
         for doc_name, html_content in documents.items():
             pdf_bytes: bytes
-            print(f"🔄 Processing {doc_name} for PDF conversion...")
+            print(f"🔄 Processing {doc_name} for PDF conversion (FIXED)...")
             
-            # First try xhtml2pdf (more reliable)
-            if render_with_xhtml2pdf is not None:
+            # First try WeasyPrint (recommended for best results)
+            if render_with_weasy is not None:
                 try:
-                    print(f"  📄 Using xhtml2pdf for {doc_name}...")
-                    pdf_bytes = render_with_xhtml2pdf(html_content)
-                    print(f"  ✅ xhtml2pdf successful for {doc_name} ({len(pdf_bytes)} bytes)")
-                except Exception as e:
-                    print(f"  ❌ xhtml2pdf failed for {doc_name}: {str(e)}")
-                    # Try WeasyPrint as fallback
-                    if render_with_weasy is not None:
-                        try:
-                            print(f"  📄 Trying WeasyPrint as fallback for {doc_name}...")
-                            pdf_bytes = render_with_weasy(html_content)
-                            print(f"  ✅ WeasyPrint successful for {doc_name} ({len(pdf_bytes)} bytes)")
-                        except Exception as e2:
-                            print(f"  ❌ WeasyPrint also failed for {doc_name}: {str(e2)}")
-                            pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
-                    else:
-                        pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
-            # If xhtml2pdf not available, try WeasyPrint
-            elif render_with_weasy is not None:
-                try:
-                    print(f"  📄 Using WeasyPrint for {doc_name}...")
+                    print(f"  📄 Using WeasyPrint for {doc_name} (enhanced)...")
                     pdf_bytes = render_with_weasy(html_content)
                     print(f"  ✅ WeasyPrint successful for {doc_name} ({len(pdf_bytes)} bytes)")
                 except Exception as e:
                     print(f"  ❌ WeasyPrint failed for {doc_name}: {str(e)}")
+                    # Try xhtml2pdf as fallback
+                    if render_with_xhtml2pdf is not None:
+                        try:
+                            print(f"  📄 Trying xhtml2pdf as fallback for {doc_name}...")
+                            pdf_bytes = render_with_xhtml2pdf(html_content)
+                            print(f"  ✅ xhtml2pdf successful for {doc_name} ({len(pdf_bytes)} bytes)")
+                        except Exception as e2:
+                            print(f"  ❌ xhtml2pdf also failed for {doc_name}: {str(e2)}")
+                            pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
+                    else:
+                        pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
+            # If WeasyPrint not available, try xhtml2pdf
+            elif render_with_xhtml2pdf is not None:
+                try:
+                    print(f"  📄 Using xhtml2pdf for {doc_name} (enhanced)...")
+                    pdf_bytes = render_with_xhtml2pdf(html_content)
+                    print(f"  ✅ xhtml2pdf successful for {doc_name} ({len(pdf_bytes)} bytes)")
+                except Exception as e:
+                    print(f"  ❌ xhtml2pdf failed for {doc_name}: {str(e)}")
                     pdf_bytes = self._create_simple_pdf_fallback(doc_name, html_content)
             else:
                 # No PDF engine available
@@ -372,7 +374,95 @@ class DocumentGenerator:
         # Memory cleanup
         gc.collect()
         return pdf_files
+    
+    def _add_print_css(self, html_content: str) -> str:
+        """Add enhanced print CSS to prevent PDF distortion"""
+        # Enhanced print CSS to prevent distortion
+        print_css = """
+        <style>
+        /* CRITICAL: Enhanced print CSS to prevent PDF distortion */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            
+            /* Table fixes to prevent distortion */
+            table {
+                width: 100% !important;
+                border-collapse: collapse;
+                page-break-inside: auto;
+                table-layout: fixed;
+            }
+            
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            td, th {
+                page-break-inside: avoid;
+                page-break-after: auto;
+                word-wrap: break-word;
+                padding: 8px;
+                border: 1px solid #ddd;
+            }
+            
+            /* Prevent elements from breaking */
+            h1, h2, h3, h4, h5, h6 {
+                page-break-after: avoid;
+            }
+            
+            /* Hide unnecessary elements in PDF */
+            .no-print {
+                display: none !important;
+            }
+            
+            /* Ensure proper page margins */
+            @page {
+                size: A4;
+                margin: 1in;
+            }
+        }
+        </style>
+        """
         
+        # Insert print CSS into HTML head
+        if '<head>' in html_content:
+            return html_content.replace('<head>', f'<head>{print_css}')
+        else:
+            # If no head tag, add it
+            return html_content.replace('<html>', f'<html><head>{print_css}</head>')
+    
+    def _enhance_html_for_pdf(self, html_content: str) -> str:
+        """Enhance HTML for better PDF conversion"""
+        # Clean HTML for better compatibility
+        clean_html = html_content
+        
+        # Convert mm units to px for better PDF rendering
+        import re
+        clean_html = re.sub(r'(\d+(?:\.\d+)?)mm', lambda m: f"{float(m.group(1)) * 3.78:.2f}px", clean_html)
+        
+        # Remove problematic CSS properties but KEEP table-layout for width consistency
+        clean_html = clean_html.replace('box-sizing: border-box;', '')
+        # Keep table-layout: fixed for width consistency - CRITICAL for table widths
+        clean_html = clean_html.replace('break-inside: avoid;', '')
+        
+        # Add viewport meta tag for better rendering
+        if '<head>' in clean_html and '<meta name="viewport"' not in clean_html:
+            clean_html = clean_html.replace('<head>', '<head><meta name="viewport" content="width=device-width, initial-scale=1.0">')
+        
+        return clean_html
+    
     def _create_simple_pdf_fallback(self, doc_name: str, html_content: str) -> bytes:
         """Create a simple PDF using ReportLab as a last resort fallback"""
         try:
@@ -416,15 +506,66 @@ class DocumentGenerator:
             return f"PDF generation completely failed for {doc_name}: All engines failed".encode()
     
     def _generate_first_page(self) -> str:
-        """Generate First Page Summary document"""
+        """Generate First Page Summary document with enhanced PDF compatibility"""
         current_date = datetime.now().strftime('%d/%m/%Y')
         
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>First Page Summary</title>
             <style>
+                /* Screen styles */
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                }}
+                
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                }}
+                
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                
+                th, td {{
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                }}
+                
+                th {{
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }}
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {{
+                    body {{ font-size: 12px; }}
+                    .container {{ max-width: none; width: 100%; }}
+                    table {{ page-break-inside: auto; }}
+                    tr {{ page-break-inside: avoid; }}
+                    
+                    * {{
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }}
+                    
+                    @page {{
+                        size: A4;
+                        margin: 1cm;
+                    }}
+                }}
+                
                 @page {{ 
                     size: A4; 
                     margin: 10mm 10mm 10mm 10mm;
@@ -468,6 +609,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="container">
             <div class="page">
             <div class="header">
                 <div class="subtitle">First Page Summary</div>
@@ -528,7 +670,7 @@ class DocumentGenerator:
             
             html_content += f"""
                     <tr>
-                        <td>{row.get('Unit', '')}</td>
+                        <td>{self._format_unit_or_text(row.get('Unit', ''))}</td>
                         <td class="amount">{qty_since_display}</td>
                         <td class="amount">{qty_upto_display}</td>
                         <td>{self._safe_serial_no(row.get('Item No.', row.get('Item', '')))}</td>
@@ -557,6 +699,7 @@ class DocumentGenerator:
                 </tbody>
             </table>
             </div>
+            </div>
         </body>
         </html>
         """
@@ -571,8 +714,59 @@ class DocumentGenerator:
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Deviation Statement</title>
             <style>
+                /* Screen styles */
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                }}
+                
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                }}
+                
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                
+                th, td {{
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                }}
+                
+                th {{
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }}
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {{
+                    body {{ font-size: 12px; }}
+                    .container {{ max-width: none; width: 100%; }}
+                    table {{ page-break-inside: auto; }}
+                    tr {{ page-break-inside: avoid; }}
+                    
+                    * {{
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }}
+                    
+                    @page {{
+                        size: A4 landscape;
+                        margin: 1cm;
+                    }}
+                }}
+                
                 @page {{ 
                     size: A4 landscape; 
                     margin: 10mm 10mm 10mm 10mm;
@@ -616,6 +810,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="container">
             <div class="page">
             <div class="header">
                 <div class="subtitle">Deviation Statement</div>
@@ -687,7 +882,7 @@ class DocumentGenerator:
             wo_qty_display = f"{wo_qty:.2f}" if wo_qty > 0 else ""
             wo_rate_display = f"{wo_rate:.2f}" if wo_rate > 0 else ""
             wo_amount_display = f"{wo_amount:.2f}" if wo_amount > 0 else ""
-            bq_qty_display = f"{bq_qty:.2f}" if bq_qty > 0 else ""
+            bq_qty_display = f"{bq_qty:.2f}" if bq_qty > 0 else "0.00"  # Show 0.00 for executed quantity
             bq_amount_display = f"{bq_amount:.2f}" if bq_amount > 0 else ""
             excess_qty_display = f"{excess_qty:.2f}" if excess_qty > 0 else ""
             excess_amt_display = f"{excess_amt:.2f}" if excess_amt > 0 else ""
@@ -698,7 +893,7 @@ class DocumentGenerator:
                     <tr>
                         <td>{self._safe_serial_no(wo_row.get('Item No.', wo_row.get('Item', '')))}</td>
                         <td>{wo_row.get('Description', '')}</td>
-                        <td>{wo_row.get('Unit', '')}</td>
+                        <td>{self._format_unit_or_text(wo_row.get('Unit', ''))}</td>
                         <td class="amount">{wo_qty_display}</td>
                         <td class="amount">{wo_rate_display}</td>
                         <td class="amount">{wo_amount_display}</td>
@@ -716,6 +911,7 @@ class DocumentGenerator:
                 </tbody>
             </table>
             </div>
+            </div>
         </body>
         </html>
         """
@@ -730,8 +926,59 @@ class DocumentGenerator:
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Final Bill Scrutiny Sheet</title>
             <style>
+                /* Screen styles */
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                }}
+                
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                }}
+                
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                
+                th, td {{
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                }}
+                
+                th {{
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }}
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {{
+                    body {{ font-size: 12px; }}
+                    .container {{ max-width: none; width: 100%; }}
+                    table {{ page-break-inside: auto; }}
+                    tr {{ page-break-inside: avoid; }}
+                    
+                    * {{
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }}
+                    
+                    @page {{
+                        size: A4;
+                        margin: 1cm;
+                    }}
+                }}
+                
                 @page {{ 
                     size: A4; 
                     margin: 10mm 10mm 10mm 10mm;
@@ -760,6 +1007,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="container">
             <div class="page">
             <div class="header">
                 <div class="subtitle">Final Bill Scrutiny Sheet</div>
@@ -807,6 +1055,7 @@ class DocumentGenerator:
                 </tbody>
             </table>
             </div>
+            </div>
         </body>
         </html>
         """
@@ -821,8 +1070,59 @@ class DocumentGenerator:
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Extra Items Statement</title>
             <style>
+                /* Screen styles */
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                }}
+                
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                }}
+                
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                
+                th, td {{
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                }}
+                
+                th {{
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }}
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {{
+                    body {{ font-size: 12px; }}
+                    .container {{ max-width: none; width: 100%; }}
+                    table {{ page-break-inside: auto; }}
+                    tr {{ page-break-inside: avoid; }}
+                    
+                    * {{
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }}
+                    
+                    @page {{
+                        size: A4;
+                        margin: 1cm;
+                    }}
+                }}
+                
                 @page {{ 
                     size: A4; 
                     margin: 10mm 10mm 10mm 10mm;
@@ -859,6 +1159,7 @@ class DocumentGenerator:
             </style>
         </head>
         <body>
+            <div class="container">
             <div class="page">
             <div class="header">
                 <div class="subtitle">Extra Items Statement</div>
@@ -922,6 +1223,7 @@ class DocumentGenerator:
         
         html_content += """
             </div>
+            </div>
         </body>
         </html>
         """
@@ -929,189 +1231,116 @@ class DocumentGenerator:
         return html_content
     
     def _generate_certificate_ii(self) -> str:
-        """Generate Professional Certificate II - Government Standard"""
+        """Generate Certificate II"""
         current_date = datetime.now().strftime('%d/%m/%Y')
         
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Certificate II - Work Completion Certificate</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Certificate II</title>
             <style>
+                /* Screen styles */
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                }}
+                
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                }}
+                
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                
+                th, td {{
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                }}
+                
+                th {{
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }}
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {{
+                    body {{ font-size: 12px; }}
+                    .container {{ max-width: none; width: 100%; }}
+                    table {{ page-break-inside: auto; }}
+                    tr {{ page-break-inside: avoid; }}
+                    
+                    * {{
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }}
+                    
+                    @page {{
+                        size: A4;
+                        margin: 1cm;
+                    }}
+                }}
+                
                 @page {{ 
                     size: A4; 
-                    margin: 15mm 20mm 15mm 20mm;
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
                 }}
                 * {{ box-sizing: border-box; }}
                 body {{ 
-                    font-family: 'Times New Roman', serif; 
+                    font-family: Arial, sans-serif; 
                     margin: 0; 
-                    padding: 0;
-                    font-size: 14pt;
-                    line-height: 1.6;
-                    color: #000;
+                    padding: 10mm;
+                    font-size: 11pt; 
                 }}
-                .letterhead {{
-                    text-align: center;
-                    border-bottom: 3px double #000;
-                    padding-bottom: 15px;
-                    margin-bottom: 20px;
-                }}
-                .dept-header {{
-                    font-size: 18pt;
-                    font-weight: bold;
-                    color: #2d5f3f;
-                    margin-bottom: 5px;
-                }}
-                .govt-header {{
-                    font-size: 14pt;
-                    font-weight: bold;
-                    margin-bottom: 3px;
-                }}
-                .office-header {{
-                    font-size: 12pt;
-                    margin-bottom: 8px;
-                }}
-                .certificate-title {{
-                    text-align: center;
-                    font-size: 20pt;
-                    font-weight: bold;
-                    text-decoration: underline;
-                    margin: 25px 0;
-                    color: #2d5f3f;
-                }}
-                .certificate-subtitle {{
-                    text-align: center;
-                    font-size: 16pt;
-                    font-weight: bold;
-                    margin-bottom: 20px;
-                }}
-                .content {{
-                    text-align: justify;
-                    margin: 20px 0;
-                    text-indent: 50px;
-                }}
-                .project-details {{
-                    background: #f8f9fa;
-                    padding: 15px;
-                    border: 2px solid #2d5f3f;
-                    margin: 20px 0;
-                    border-radius: 5px;
-                }}
-                .detail-row {{
-                    display: flex;
-                    margin-bottom: 8px;
-                }}
-                .detail-label {{
-                    font-weight: bold;
-                    width: 35%;
-                    color: #2d5f3f;
-                }}
-                .detail-value {{
-                    width: 65%;
-                    border-bottom: 1px dotted #000;
-                    min-height: 20px;
-                }}
-                .signatures {{
-                    margin-top: 40px;
-                    display: flex;
-                    justify-content: space-between;
-                }}
-                .signature-block {{
-                    text-align: center;
-                    width: 45%;
-                }}
-                .signature-line {{
-                    border-bottom: 2px solid #000;
-                    margin-bottom: 5px;
-                    height: 50px;
-                }}
-                .signature-title {{
-                    font-weight: bold;
-                    font-size: 12pt;
-                }}
-                .reference-no {{
-                    text-align: right;
-                    font-size: 12pt;
-                    margin-bottom: 10px;
-                }}
-                .date-place {{
-                    display: flex;
-                    justify-content: space-between;
-                    margin-top: 30px;
-                    font-weight: bold;
-                }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 16pt; font-weight: bold; }}
+                .subtitle {{ font-size: 11pt; margin: 3px 0; }}
+                .content {{ margin: 10px 0; line-height: 1.5; }}
+                .signature {{ margin-top: 40px; }}
             </style>
         </head>
         <body>
-            <div class="letterhead">
-                <div class="dept-header">PUBLIC WORKS DEPARTMENT</div>
-                <div class="govt-header">GOVERNMENT OF RAJASTHAN</div>
-                <div class="office-header">OFFICE OF THE EXECUTIVE ENGINEER, PWD UDAIPUR</div>
-            </div>
-            
-            <div class="reference-no">
-                <strong>No. PWD/UDR/CE-II/{datetime.now().strftime('%Y')}/____</strong>
-            </div>
-            
-            <div class="certificate-title">CERTIFICATE - II</div>
-            <div class="certificate-subtitle">(WORK COMPLETION CERTIFICATE)</div>
-            
-            <div class="content">
-                <p>This is to <strong>CERTIFY</strong> that the work described in the measurement book and bill has been executed according to the approved drawings, specifications, and technical standards prescribed for the work, and is <strong>COMPLETE IN ALL RESPECTS</strong>.</p>
-                
-                <p>The undersigned has carefully inspected the work and found that all items of work have been executed as per the contract agreement and technical specifications approved by the competent authority.</p>
-            </div>
-            
-            <div class="project-details">
-                <div class="detail-row">
-                    <div class="detail-label">Project Name:</div>
-                    <div class="detail-value">{self.title_data.get('Project Name', 'N/A')}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Contract Number:</div>
-                    <div class="detail-value">{self.title_data.get('Contract No', 'N/A')}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Work Order Number:</div>
-                    <div class="detail-value">{self.title_data.get('Work Order No', 'N/A')}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Contractor Name:</div>
-                    <div class="detail-value">{self.title_data.get('Contractor Name', 'N/A')}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Work Description:</div>
-                    <div class="detail-value">{self.title_data.get('Work Description', 'Infrastructure Development Work')}</div>
-                </div>
+            <div class="container">
+            <div class="page">
+            <div class="header">
+                <div class="subtitle">Certificate II</div>
+                <div class="subtitle">Date: {current_date}</div>
             </div>
             
             <div class="content">
-                <p>The work has been executed in accordance with the Indian Standard specifications, PWD Manual, and contract terms and conditions. All safety measures and quality control procedures have been duly followed during the execution of work.</p>
+                <p>This is to certify that the work described in the bill has been executed according to the specifications and is complete in all respects.</p>
                 
-                <p><strong>The work is hereby ACCEPTED</strong> and is fit for the intended use as per the approved project requirements.</p>
+                <p><strong>Project Details:</strong></p>
+                <ul>
+                    <li>Project Name: {self.title_data.get('Project Name', 'N/A')}</li>
+                    <li>Contract No: {self.title_data.get('Contract No', 'N/A')}</li>
+                    <li>Work Order No: {self.title_data.get('Work Order No', 'N/A')}</li>
+                </ul>
+                
+                <p>The work has been executed in accordance with the contract terms and conditions.</p>
             </div>
             
-            <div class="date-place">
-                <div>Date: {current_date}</div>
-                <div>Place: Udaipur</div>
+            <div class="signature">
+                <p>_________________________</p>
+                <p>Engineer-in-Charge</p>
+                <p>Date: {current_date}</p>
             </div>
-            
-            <div class="signatures">
-                <div class="signature-block">
-                    <div class="signature-line"></div>
-                    <div class="signature-title">CONTRACTOR</div>
-                    <div style="font-size: 11pt; margin-top: 5px;">(Name & Signature with Seal)</div>
-                </div>
-                <div class="signature-block">
-                    <div class="signature-line"></div>
-                    <div class="signature-title">EXECUTIVE ENGINEER</div>
-                    <div style="font-size: 11pt; margin-top: 5px;">PWD, Udaipur Division</div>
-                </div>
             </div>
-            
-            <div style="text-align: center; margin-top: 20px; font-size: 10pt; font-style: italic;">
-                <p>This certificate is issued as per PWD Manual provisions and Government of Rajasthan guidelines.</p>
             </div>
         </body>
         </html>
@@ -1120,258 +1349,165 @@ class DocumentGenerator:
         return html_content
     
     def _generate_certificate_iii(self) -> str:
-        """Generate Professional Certificate III - Government Standard"""
+        """Generate Certificate III"""
         current_date = datetime.now().strftime('%d/%m/%Y')
         
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Certificate III - Rate Verification Certificate</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Certificate III</title>
             <style>
-                @page {{ 
-                    size: A4; 
-                    margin: 15mm 20mm 15mm 20mm;
+                /* Screen styles */
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
                 }}
-                * {{ box-sizing: border-box; }}
-                body {{ 
-                    font-family: 'Times New Roman', serif; 
-                    margin: 0; 
-                    padding: 0;
-                    font-size: 14pt;
-                    line-height: 1.6;
-                    color: #000;
+                
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
                 }}
-                .letterhead {{
-                    text-align: center;
-                    border-bottom: 3px double #000;
-                    padding-bottom: 15px;
-                    margin-bottom: 20px;
-                }}
-                .dept-header {{
-                    font-size: 18pt;
-                    font-weight: bold;
-                    color: #2d5f3f;
-                    margin-bottom: 5px;
-                }}
-                .govt-header {{
-                    font-size: 14pt;
-                    font-weight: bold;
-                    margin-bottom: 3px;
-                }}
-                .office-header {{
-                    font-size: 12pt;
-                    margin-bottom: 8px;
-                }}
-                .certificate-title {{
-                    text-align: center;
-                    font-size: 20pt;
-                    font-weight: bold;
-                    text-decoration: underline;
-                    margin: 25px 0;
-                    color: #2d5f3f;
-                }}
-                .certificate-subtitle {{
-                    text-align: center;
-                    font-size: 16pt;
-                    font-weight: bold;
-                    margin-bottom: 20px;
-                }}
-                .content {{
-                    text-align: justify;
-                    margin: 20px 0;
-                    text-indent: 50px;
-                }}
-                .verification-table {{
+                
+                table {{
                     width: 100%;
                     border-collapse: collapse;
                     margin: 20px 0;
-                    border: 2px solid #2d5f3f;
                 }}
-                .verification-table th {{
-                    background: #2d5f3f;
-                    color: white;
-                    padding: 12px 8px;
-                    text-align: center;
-                    font-weight: bold;
-                    border: 1px solid #000;
+                
+                th, td {{
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
                 }}
-                .verification-table td {{
-                    padding: 10px 8px;
-                    border: 1px solid #000;
-                    text-align: center;
-                }}
-                .project-details {{
-                    background: #f8f9fa;
-                    padding: 15px;
-                    border: 2px solid #2d5f3f;
-                    margin: 20px 0;
-                    border-radius: 5px;
-                }}
-                .detail-row {{
-                    display: flex;
-                    margin-bottom: 8px;
-                }}
-                .detail-label {{
-                    font-weight: bold;
-                    width: 35%;
-                    color: #2d5f3f;
-                }}
-                .detail-value {{
-                    width: 65%;
-                    border-bottom: 1px dotted #000;
-                    min-height: 20px;
-                }}
-                .signatures {{
-                    margin-top: 40px;
-                    display: flex;
-                    justify-content: space-between;
-                }}
-                .signature-block {{
-                    text-align: center;
-                    width: 30%;
-                }}
-                .signature-line {{
-                    border-bottom: 2px solid #000;
-                    margin-bottom: 5px;
-                    height: 50px;
-                }}
-                .signature-title {{
-                    font-weight: bold;
-                    font-size: 12pt;
-                }}
-                .reference-no {{
-                    text-align: right;
-                    font-size: 12pt;
-                    margin-bottom: 10px;
-                }}
-                .date-place {{
-                    display: flex;
-                    justify-content: space-between;
-                    margin-top: 30px;
+                
+                th {{
+                    background-color: #f5f5f5;
                     font-weight: bold;
                 }}
-                .highlight {{
-                    background: #fff3cd;
-                    padding: 10px;
-                    border-left: 4px solid #f39c12;
-                    margin: 15px 0;
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {{
+                    body {{ font-size: 12px; }}
+                    .container {{ max-width: none; width: 100%; }}
+                    table {{ page-break-inside: auto; }}
+                    tr {{ page-break-inside: avoid; }}
+                    
+                    * {{
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }}
+                    
+                    @page {{
+                        size: A4;
+                        margin: 1cm;
+                    }}
                 }}
+                
+                @page {{ 
+                    size: A4; 
+                    margin: 10mm 10mm 10mm 10mm;
+                    margin-top: 10mm;
+                    margin-right: 10mm;
+                    margin-bottom: 10mm;
+                    margin-left: 10mm;
+                }}
+                * {{ box-sizing: border-box; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 10mm;
+                    font-size: 11pt; 
+                }}
+                .page {{ }}
+                .header {{ text-align: center; margin-bottom: 8px; }}
+                .title {{ font-size: 16pt; font-weight: bold; }}
+                .subtitle {{ font-size: 11pt; margin: 3px 0; }}
+                .content {{ margin: 10px 0; line-height: 1.5; }}
+                .signature {{ margin-top: 40px; }}
             </style>
         </head>
         <body>
-            <div class="letterhead">
-                <div class="dept-header">PUBLIC WORKS DEPARTMENT</div>
-                <div class="govt-header">GOVERNMENT OF RAJASTHAN</div>
-                <div class="office-header">OFFICE OF THE ACCOUNTS OFFICER, PWD UDAIPUR</div>
+            <div class="container">
+            <div class="page">
+            <div class="header">
+                <div class="subtitle">Certificate III</div>
+                <div class="subtitle">Date: {current_date}</div>
             </div>
-            
-            <div class="reference-no">
-                <strong>No. PWD/UDR/AO/CE-III/{datetime.now().strftime('%Y')}/____</strong>
-            </div>
-            
-            <div class="certificate-title">CERTIFICATE - III</div>
-            <div class="certificate-subtitle">(RATE VERIFICATION & ACCOUNTS CERTIFICATE)</div>
             
             <div class="content">
-                <p>This is to <strong>CERTIFY</strong> that I have <strong>CHECKED AND VERIFIED</strong> the rates charged in the attached bill and found them to be in accordance with the sanctioned estimate, approved rate contract, and prevailing government rate schedule.</p>
+                <p>This is to certify that the rates charged in the bill are in accordance with the contract and approved rate schedule.</p>
                 
-                <p>All calculations have been arithmetically verified and found correct. The rates applied are as per the approved schedule and no unauthorized deviation has been made.</p>
-            </div>
-            
-            <div class="project-details">
-                <div class="detail-row">
-                    <div class="detail-label">Project Name:</div>
-                    <div class="detail-value">{self.title_data.get('Project Name', 'N/A')}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Contract Number:</div>
-                    <div class="detail-value">{self.title_data.get('Contract No', 'N/A')}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Work Order Number:</div>
-                    <div class="detail-value">{self.title_data.get('Work Order No', 'N/A')}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Bill Amount:</div>
-                    <div class="detail-value">Rs. ______ (Subject to Verification)</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Rate Schedule Reference:</div>
-                    <div class="detail-value">PWD Rate Schedule {datetime.now().strftime('%Y')}</div>
-                </div>
-            </div>
-            
-            <div class="highlight">
-                <strong>VERIFICATION CHECKLIST COMPLETED:</strong>
-                <ul style="margin: 10px 0; padding-left: 30px;">
-                    <li>✓ Rate Schedule Compliance Verified</li>
-                    <li>✓ Arithmetic Calculations Checked</li>
-                    <li>✓ Measurements Cross-Verified</li>
-                    <li>✓ Contract Terms Compliance Ensured</li>
-                    <li>✓ Government Guidelines Followed</li>
+                <p><strong>Project Details:</strong></p>
+                <ul>
+                    <li>Project Name: {self.title_data.get('Project Name', 'N/A')}</li>
+                    <li>Contract No: {self.title_data.get('Contract No', 'N/A')}</li>
+                    <li>Work Order No: {self.title_data.get('Work Order No', 'N/A')}</li>
                 </ul>
+                
+                <p>All rates and calculations have been verified and are correct.</p>
             </div>
             
-            <table class="verification-table">
-                <thead>
-                    <tr>
-                        <th style="width: 40%;">Verification Parameter</th>
-                        <th style="width: 20%;">Status</th>
-                        <th style="width: 40%;">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Rate Compliance Check</td>
-                        <td><strong>✓ VERIFIED</strong></td>
-                        <td>As per approved rate schedule</td>
-                    </tr>
-                    <tr>
-                        <td>Calculation Accuracy</td>
-                        <td><strong>✓ VERIFIED</strong></td>
-                        <td>Arithmetically correct</td>
-                    </tr>
-                    <tr>
-                        <td>Measurement Validation</td>
-                        <td><strong>✓ VERIFIED</strong></td>
-                        <td>Cross-checked with MB records</td>
-                    </tr>
-                </tbody>
-            </table>
-            
-            <div class="content">
-                <p><strong>CERTIFICATION:</strong> The rates and amounts charged in this bill are found to be correct and in accordance with the government approved rate schedule. The bill is <strong>RECOMMENDED FOR PAYMENT</strong> subject to other administrative and technical clearances.</p>
+            <div class="signature">
+                <p>_________________________</p>
+                <p>Accounts Officer</p>
+                <p>Date: {current_date}</p>
             </div>
-            
-            <div class="date-place">
-                <div>Date: {current_date}</div>
-                <div>Place: Udaipur</div>
             </div>
-            
-            <div class="signatures">
-                <div class="signature-block">
-                    <div class="signature-line"></div>
-                    <div class="signature-title">ASSISTANT ENGINEER</div>
-                    <div style="font-size: 11pt; margin-top: 5px;">Technical Verification</div>
-                </div>
-                <div class="signature-block">
-                    <div class="signature-line"></div>
-                    <div class="signature-title">ACCOUNTS OFFICER</div>
-                    <div style="font-size: 11pt; margin-top: 5px;">Financial Verification</div>
-                </div>
-                <div class="signature-block">
-                    <div class="signature-line"></div>
-                    <div class="signature-title">EXECUTIVE ENGINEER</div>
-                    <div style="font-size: 11pt; margin-top: 5px;">Final Approval</div>
-                </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px; font-size: 10pt; font-style: italic;">
-                <p>This certificate is issued as per Government Financial Rules and PWD Account Code provisions.</p>
             </div>
         </body>
         </html>
         """
         
         return html_content
+
+def test_enhanced_generator():
+    """Test the enhanced document generator"""
+    print("🧪 Testing Enhanced Document Generator with Fixed PDF Conversion...")
+    
+    # Create sample data for testing
+    sample_data = {
+        'title_data': {
+            'Project Name': 'Test Project',
+            'Contract No': '123/2025',
+            'Work Order No': 'WO-456'
+        },
+        'work_order_data': pd.DataFrame([
+            {'Item No.': '1', 'Description': 'Test Item 1', 'Unit': 'PCS', 'Quantity': 10, 'Rate': 100},
+            {'Item No.': '2', 'Description': 'Test Item 2', 'Unit': 'PCS', 'Quantity': 5, 'Rate': 200}
+        ]),
+        'bill_quantity_data': pd.DataFrame([
+            {'Item No.': '1', 'Description': 'Test Item 1', 'Unit': 'PCS', 'Quantity': 10, 'Rate': 100},
+            {'Item No.': '2', 'Description': 'Test Item 2', 'Unit': 'PCS', 'Quantity': 5, 'Rate': 200}
+        ]),
+        'extra_items_data': pd.DataFrame([
+            {'Item No.': '3', 'Description': 'Extra Item', 'Unit': 'PCS', 'Quantity': 3, 'Rate': 150}
+        ])
+    }
+    
+    # Create generator and test
+    generator = EnhancedDocumentGenerator(sample_data)
+    documents = generator.generate_all_documents()
+    
+    print(f"✅ Generated {len(documents)} HTML documents:")
+    for doc_name in documents.keys():
+        print(f"   - {doc_name}")
+    
+    # Test PDF conversion
+    try:
+        pdf_documents = generator.create_pdf_documents_fixed(documents)
+        print(f"✅ Generated {len(pdf_documents)} PDF documents:")
+        for doc_name in pdf_documents.keys():
+            print(f"   - {doc_name} ({len(pdf_documents[doc_name])} bytes)")
+    except Exception as e:
+        print(f"❌ PDF generation failed: {str(e)}")
+    
+    return documents
+
+if __name__ == "__main__":
+    test_enhanced_generator()
