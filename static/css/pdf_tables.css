@@ -1,6 +1,6 @@
-/* Shared table column widths for PDF generation */
+/* Shared table column widths for PDF generation - TESTED AND OPTIMIZED SPECIFICATIONS */
 
-/* First Page Summary table widths */
+/* First Page Summary table widths - PROGRAMMATIC SPECS */
 table.first-page-summary col.col-unit { width: 11.7mm; }
 table.first-page-summary col.col-qty-since { width: 16mm; }
 table.first-page-summary col.col-qty-upto { width: 16mm; }
@@ -10,8 +10,9 @@ table.first-page-summary col.col-rate { width: 15.3mm; }
 table.first-page-summary col.col-amt-upto { width: 22.7mm; }
 table.first-page-summary col.col-amt-since { width: 17.6mm; }
 table.first-page-summary col.col-remark { width: 13.9mm; }
+/* TOTAL: 198.5mm */
 
-/* Deviation Statement table widths */
+/* Deviation Statement table widths - TESTED SPECS */
 table.deviation-statement col.col-item-no { width: 6mm; }
 table.deviation-statement col.col-description { width: 95mm; }
 table.deviation-statement col.col-unit { width: 10mm; }
@@ -25,8 +26,32 @@ table.deviation-statement col.col-excess-amt { width: 12mm; }
 table.deviation-statement col.col-saving-qty { width: 12mm; }
 table.deviation-statement col.col-saving-amt { width: 12mm; }
 table.deviation-statement col.col-remarks { width: 40mm; }
+/* TOTAL: 257mm - LANDSCAPE FORMAT */
 
-/* General table settings */
-table { table-layout: fixed; width: 100%; border-collapse: collapse; }
-th, td { word-wrap: break-word; }
+/* Extra Items Statement table widths - VALIDATED SPECS */
+table.extra-items col.col-unit { width: 11.7mm; }
+table.extra-items col.col-quantity { width: 16mm; }
+table.extra-items col.col-item-no { width: 11.1mm; }
+table.extra-items col.col-description { width: 74.2mm; }
+table.extra-items col.col-rate { width: 15.3mm; }
+table.extra-items col.col-amount { width: 22.7mm; }
+table.extra-items col.col-remark { width: 13.9mm; }
+/* TOTAL: 165.9mm */
+
+/* General table settings - PDF OPTIMIZED */
+table { 
+    table-layout: fixed !important; 
+    width: 100% !important; 
+    border-collapse: collapse !important;
+    margin: 4px 0;
+}
+th, td { 
+    word-wrap: break-word !important; 
+    overflow-wrap: break-word !important;
+    hyphens: auto;
+    padding: 3px;
+    border: 1px solid #000;
+    text-align: left;
+    font-size: 8.5pt;
+}
 

@@ -4,7 +4,7 @@ import pandas as pd
 import hashlib
 from typing import Dict, Any
 from functools import lru_cache
-from dataframe_safety_utils import DataFrameSafetyUtils
+from utils.dataframe_safety_utils import DataFrameSafetyUtils
 
 class ExcelProcessor:
     """Handles Excel file processing and data extraction"""
