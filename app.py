@@ -13,6 +13,7 @@ import json
 import tempfile
 from typing import Dict, List, Any, Optional, Union
 import logging
+import streamlit.components.v1 as components
 
 # Add utils to path for imports
 utils_path = Path(__file__).parent / "utils"
@@ -21,7 +22,10 @@ if str(utils_path) not in sys.path:
 
 from utils.excel_processor import ExcelProcessor
 from utils.document_generator import DocumentGenerator
+from enhanced_document_generator_fixed import EnhancedDocumentGenerator
 from utils.pdf_merger import PDFMerger
+from batch_processor import HighPerformanceBatchProcessor, StreamlitBatchInterface
+from optimized_pdf_converter import OptimizedPDFConverter
 
 # Safe import for DataFrameSafetyUtils
 try:
@@ -458,7 +462,7 @@ def show_mode_selection():
     """Display mode selection interface"""
     st.markdown("## Choose Your Workflow")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         if st.button("📁 Excel Upload Mode", key="excel_mode"):
@@ -494,6 +498,23 @@ def show_mode_selection():
         </div>
         """, unsafe_allow_html=True)
 
+    with col3:
+        if st.button("🚀 Batch Processing Mode", key="batch_mode"):
+            st.session_state.mode = "batch"
+            st.session_state.step = 1
+            st.rerun()
+
+        st.markdown("""
+        <div class="mode-card">
+            <div style="font-size: 3rem; margin-bottom: 1rem; color: #ff6b35;">🚀</div>
+            <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; color: #2c3e50;">Batch Processing Mode</div>
+            <div style="color: #7f8c8d; font-size: 0.9rem; line-height: 1.4;">
+                Process multiple Excel files simultaneously. 
+                High-performance processing with quality validation.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     # Mode comparison
     st.markdown("---")
     st.markdown("### 📊 Mode Comparison")
@@ -504,21 +525,32 @@ def show_mode_selection():
             "Setup Time", 
             "Flexibility",
             "Best For",
-            "Technical Skill Required"
+            "Technical Skill Required",
+            "Performance"
         ],
         "Excel Upload Mode": [
             "Pre-prepared Excel files",
             "Quick (if Excel ready)",
             "Limited to Excel structure", 
             "Bulk data, recurring bills",
-            "Excel knowledge"
+            "Excel knowledge",
+            "Medium"
         ],
         "Online Entry Mode": [
             "Web forms and inputs",
             "Medium (step-by-step)",
             "High customization",
             "One-time bills, custom items",
-            "Basic computer skills"
+            "Basic computer skills",
+            "Medium"
+        ],
+        "Batch Processing Mode": [
+            "Multiple Excel files",
+            "Very Quick (automated)",
+            "High (bulk processing)",
+            "Large-scale operations",
+            "Basic computer skills",
+            "High"
         ]
     })
 
@@ -749,8 +781,8 @@ def generate_documents_excel_mode(data: Dict):
                 data['title_data'] = st.session_state.title_data
                 st.info("📝 Using your modified title information for document generation")
             
-            # Initialize DocumentGenerator with updated data
-            doc_generator = DocumentGenerator(data)
+            # Initialize EnhancedDocumentGenerator for robust HTML→PDF
+            doc_generator = EnhancedDocumentGenerator(data)
 
             # Generate HTML documents
             html_documents = doc_generator.generate_all_documents()
@@ -820,6 +852,17 @@ def show_online_mode():
         show_extra_items_entry()
     elif st.session_state.step == 4:
         show_document_generation()
+
+def show_batch_mode():
+    """Handle batch processing mode"""
+    st.markdown("## 🚀 Batch Processing Mode")
+    
+    # Initialize batch interface
+    if 'batch_interface' not in st.session_state:
+        st.session_state.batch_interface = StreamlitBatchInterface()
+    
+    # Show batch processing interface
+    st.session_state.batch_interface.show_batch_interface()
 
 def show_work_order_upload():
     """Step 1: Upload work order and title information"""
@@ -1179,32 +1222,60 @@ def show_bill_quantity_entry():
         item_no_value = row.get('Item No.')
         if item_no_value is None:
             item_no_value = row.get('Item', f'Item_{idx + 1}')
-        item_no = str(item_no_value)
+        item_no = '' if item_no_value is None else str(item_no_value)
+        if item_no.strip().lower() in ['nan', 'none']:
+            item_no = ''
         
         # First try to get 'Description', if not found try 'item_description', if neither found use default
         description_value = row.get('Description')
         if description_value is None:
             description_value = row.get('item_description', 'No description')
-        description = str(description_value)
+        description = '' if description_value is None else str(description_value)
+        if description.strip().lower() in ['nan', 'none']:
+            description = ''
         
         # First try to get 'Unit', if not found try 'unit', if neither found use default
         unit_value = row.get('Unit')
         if unit_value is None:
             unit_value = row.get('unit', 'Unit')
-        unit = str(unit_value)
+        unit = '' if unit_value is None else str(unit_value)
+        if unit.strip().lower() in ['nan', 'none']:
+            unit = ''
         
         # Safely convert to float
+        # Parse rate safely; treat NaN/None/blank as missing (display blank)
+        rate_display_str = ''
         try:
             rate_value = row.get('Rate', row.get('rate', row.get('RATE', 0)))
-            rate = float(rate_value) if rate_value is not None else 0.0
+            if rate_value is None or (isinstance(rate_value, str) and rate_value.strip().lower() in ['nan', 'none', '']) or (hasattr(pd, 'isna') and pd.isna(rate_value)):
+                rate = 0.0
+                rate_display_str = ''
+            else:
+                rate = float(rate_value)
+                rate_display_str = f"₹{rate:,.2f}"
         except (ValueError, TypeError):
             rate = 0.0
+            rate_display_str = ''
             
+        # Parse WO quantity safely; treat NaN/None/blank as missing (display blank)
+        wo_qty_display_str = ''
         try:
             wo_qty_value = row.get('Quantity Since', row.get('Quantity', 0))
-            work_order_qty = float(wo_qty_value) if wo_qty_value is not None else 0.0
+            if wo_qty_value is None or (isinstance(wo_qty_value, str) and wo_qty_value.strip().lower() in ['nan', 'none', '']) or (hasattr(pd, 'isna') and pd.isna(wo_qty_value)):
+                work_order_qty = 0.0
+                wo_qty_display_str = ''
+            else:
+                work_order_qty = float(wo_qty_value)
+                wo_qty_display_str = f"{work_order_qty:,.2f}"
         except (ValueError, TypeError):
             work_order_qty = 0.0
+            wo_qty_display_str = ''
+
+        # Discipline: Only positive-rate rows should display/use WO quantity or accept Bill Qty
+        is_positive_rate = (rate > 0.0)
+        if not is_positive_rate:
+            work_order_qty = 0.0
+            wo_qty_display_str = ''
         
         # Quantity input key
         qty_key = f"bill_qty_{idx}_{item_no}"
@@ -1218,10 +1289,10 @@ def show_bill_quantity_entry():
             <td><strong>{item_no}</strong></td>
             <td>
                 <div class="item-description">{description}</div>
-                <div class="wo-qty-info">📋 WO Qty: {work_order_qty:,.2f} {unit}</div>
+                <div class="wo-qty-info">{('📋 WO Qty: ' + wo_qty_display_str + ' ' + unit) if is_positive_rate and wo_qty_display_str else ''}</div>
             </td>
             <td><strong>{unit}</strong></td>
-            <td class="rate-display">₹{rate:,.2f}</td>
+            <td class="rate-display">{rate_display_str}</td>
             <td class="qty-input-cell">
         """, unsafe_allow_html=True)
         
@@ -1236,7 +1307,8 @@ def show_bill_quantity_entry():
                 step=0.01,
                 key=qty_key,
                 label_visibility="collapsed",
-                help=f"Enter quantity to bill for {description[:30]}..."
+                help=f"Enter quantity to bill for {description[:30]}..." if is_positive_rate else "Bill quantity allowed only when rate > 0",
+                disabled=not is_positive_rate
             )
             # Update session state
             st.session_state.bill_quantities[qty_key] = bill_qty
@@ -1583,6 +1655,41 @@ def generate_documents_online_mode():
                 work_order_df = pd.DataFrame()
 
             bill_quantity_df = pd.DataFrame(bill_quantity_items) if bill_quantity_items else pd.DataFrame()
+
+            # CRITICAL: Reflect entered quantities into work_order_df so PDFs show correct amounts
+            # DocumentGenerator uses work_order_data ('Quantity Since' * 'Rate') for main pages
+            try:
+                if not work_order_df.empty and len(bill_quantity_items) > 0:
+                    # Normalize key column names for matching
+                    wo_item_col = 'Item No.' if 'Item No.' in work_order_df.columns else ('Item' if 'Item' in work_order_df.columns else None)
+                    if wo_item_col is not None:
+                        # Build a quick lookup from bill items by item number
+                        bq_lookup = {}
+                        for bi in bill_quantity_items:
+                            key = bi.get('Item No.', bi.get('Item', ''))
+                            bq_lookup[str(key)] = bi
+                        # Update rows in work_order_df
+                        def _apply_billed(row):
+                            key = str(row.get(wo_item_col, ''))
+                            bi = bq_lookup.get(key)
+                            if bi:
+                                row['Quantity Since'] = bi.get('Quantity', 0)
+                                row['Quantity Upto'] = bi.get('Quantity', 0)
+                                # Prefer non-zero rate from bill item, else keep existing
+                                rate_val = bi.get('Rate', row.get('Rate', 0))
+                                row['Rate'] = rate_val
+                            return row
+                        work_order_df = work_order_df.apply(_apply_billed, axis=1)
+                    else:
+                        # If no item number column, best-effort alignment by index
+                        for idx, bi in enumerate(bill_quantity_items):
+                            if idx < len(work_order_df):
+                                work_order_df.at[idx, 'Quantity Since'] = bi.get('Quantity', 0)
+                                work_order_df.at[idx, 'Quantity Upto'] = bi.get('Quantity', 0)
+                                work_order_df.at[idx, 'Rate'] = bi.get('Rate', work_order_df.at[idx, 'Rate'] if 'Rate' in work_order_df.columns else 0)
+            except Exception:
+                # If alignment fails, continue with original DataFrame; bill quantities will still be used in other docs
+                pass
             # Normalize extra items columns
             # FIXED to prevent 'str' object has no attribute 'get' error
             extra_items_list = st.session_state.get('extra_items', []) or []
@@ -1637,8 +1744,8 @@ def generate_documents_online_mode():
                 'extra_items_data': extra_items_df
             }
             
-            # Initialize DocumentGenerator
-            doc_generator = DocumentGenerator(online_data)
+            # Initialize EnhancedDocumentGenerator for robust HTML→PDF
+            doc_generator = EnhancedDocumentGenerator(online_data)
 
             # Generate HTML documents
             html_documents = doc_generator.generate_all_documents()
@@ -1841,6 +1948,8 @@ def main():
         show_excel_mode()
     elif st.session_state.mode == "online":
         show_online_mode()
+    elif st.session_state.mode == "batch":
+        show_batch_mode()
 
 # Error handling wrapper
 def run_app():

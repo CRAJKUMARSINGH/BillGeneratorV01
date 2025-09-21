@@ -1,0 +1,73 @@
+Stepwise Instructions for Testing and Enhancing Bill Generator Apps
+
+Target Apps
+
+C:\Users\Rajkumar\BillGeneratorV01
+
+C:\Users\Rajkumar\BillGeneratorV02
+
+C:\Users\Rajkumar\BillGeneratorV03
+
+Run All Bill Apps
+
+Execute each bill app and report its current status (success/failure, errors, warnings).
+
+Use Input Files for Testing
+
+Input source folders: test_input_* or sample_input*
+
+Run all input files, either one by one or as a batch, in the relevant app.
+
+Ensure all input files are processed.
+
+Output Management
+
+Save outputs in an Output folder.
+
+Create subfolders for each run named as serial_number + date for organized storage.
+
+Template Testing and Readability Enhancements
+
+Test all templates:
+
+Deviation statement
+
+Final bill scrutiny
+
+Extra items
+
+Certificate templates
+
+Check vertical alignment and readability for all templates.
+
+First page and deviation row height should auto-fit to the text length.
+
+Conditional Formatting Rules
+
+If there are no extra items, templates should:
+
+Not leave blank rows on the first page, deviation section, or extra items section.
+
+Populate properly without gaps.
+
+Column Population Fix
+
+Ensure all columns of deviation are populated correctly.
+
+Consistency Across Apps
+
+Apply the same readability and formatting standards consistently in:
+
+BillGeneratorV01
+
+BillGeneratorV02
+
+BillGeneratorV03
+
+Table Width Specifications
+
+⚠️ Important: All table widths were specified after hundreds of tests.
+
+Do not modify widths arbitrarily.
+
+If any changes were made, revert them immediately and restore the original widths, maintaining the mutual ratios established.

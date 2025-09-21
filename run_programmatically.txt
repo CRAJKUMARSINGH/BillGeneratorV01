@@ -1,0 +1,45 @@
+### Stepwise Instructions
+
+1. **Audit the Application**
+
+   * Go through the application carefully.
+   * Check all **dependencies**, **build commands**, and **run commands**.
+   * Prepare a **list of everything needed** to run the app locally on your computer.
+   * ⚠️ **Do not make any changes** to the code at this stage.
+
+2. **Document Local Setup**
+
+   * Create a `RUN_LOCALLY.md` file.
+   * Include all the info from step 1: dependencies, build instructions, and run instructions.
+   * ⚠️ Only create this file; do not modify any other part of the app.
+
+3. **Environment Setup**
+
+   * Create a `.env` file.
+   * Include required environment variables (e.g., session secret, database URL).
+   * Example:
+
+     ```env
+     SESSION_SECRET=your_session_secret
+     DATABASE_URL=your_database_url
+     ```
+
+4. **Git Ignore Sensitive Files**
+
+   * Create a `.gitignore` file.
+   * Ensure it **includes `.env`** so secrets are not pushed to GitHub.
+   * ⚠️ Do not make other changes to the project.
+
+5. **Build and Run the Application**
+
+   * Once the `.env` is ready with `SESSION_SECRET` and `DATABASE_URL`, build and run the application locally.
+   * Ensure it runs successfully without errors.
+
+6. **Programmatic Input / Test Files**
+
+   * Run the program using **input files** from the relevant folder if they exist.
+   * If no input files are present, **draft sample files** (e.g., `*.xls`, `*.csv`, `*.txt`) as needed by the application to test functionality.
+
+---
+CHECK EACH OUTPUT FILE ENSURES FULL USE OF THE a4 page with 10 mm margins all aound only
+earlier the tables in each output template  were shrinked *.html to *.pdf conversion >>>ensure it is corrected now 
