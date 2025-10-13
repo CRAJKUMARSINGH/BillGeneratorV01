@@ -1,3 +1,53 @@
+# Bill Generator - Professional Infrastructure Billing System
+
+A comprehensive Streamlit application for generating professional infrastructure billing documents with support for multiple formats and deployment options.
+
+## Features
+
+- **Multiple Input Modes**: Excel upload and online entry
+- **Professional Document Generation**: PDF, HTML outputs
+- **Batch Processing**: Handle multiple files at once
+- **Cloud Deployment Ready**: Configured for Streamlit Cloud and other platforms
+
+## Deployment
+
+### Streamlit Cloud Deployment
+
+1. Fork this repository
+2. Connect to Streamlit Cloud
+3. Select `deployable_app.py` as the main file
+4. Deploy!
+
+### Local Deployment
+
+```bash
+pip install -r requirements-deploy.txt
+streamlit run deployable_app.py
+```
+
+## Requirements
+
+- Python 3.11+
+- See `requirements-deploy.txt` for dependencies
+
+## Usage
+
+1. Upload an Excel file with Title, Work Order, and Bill Quantity sheets
+2. Process the data
+3. Generate professional documents
+4. Download PDF files
+
+## File Structure
+
+- `deployable_app.py`: Main Streamlit application for deployment
+- `app.py`: Full-featured application with all modes
+- `requirements-deploy.txt`: Minimal dependencies for cloud deployment
+- `requirements.txt`: Full dependencies for local development
+
+## License
+
+MIT License
+
 # Enhanced Bill Generator
 
 An advanced Streamlit application for infrastructure billing with dual-mode functionality: Excel upload and online entry.
