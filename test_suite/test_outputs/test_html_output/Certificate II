@@ -1,0 +1,210 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Certificate II - Work Completion Certificate</title>
+            <style>
+                body {
+                    font-family: 'Times New Roman', serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                    line-height: 1.6;
+                }
+                
+                .container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                
+                .letterhead {
+                    text-align: center;
+                    border-bottom: 3px double #000;
+                    padding-bottom: 15px;
+                    margin-bottom: 20px;
+                }
+                
+                .dept-header {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #2d5f3f;
+                    margin-bottom: 5px;
+                }
+                
+                .govt-header {
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin-bottom: 3px;
+                }
+                
+                .office-header {
+                    font-size: 12px;
+                    margin-bottom: 8px;
+                }
+                
+                .certificate-title {
+                    text-align: center;
+                    font-size: 20px;
+                    font-weight: bold;
+                    text-decoration: underline;
+                    margin: 25px 0;
+                    color: #2d5f3f;
+                }
+                
+                .certificate-subtitle {
+                    text-align: center;
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin-bottom: 20px;
+                }
+                
+                .content {
+                    text-align: justify;
+                    margin: 20px 0;
+                    text-indent: 50px;
+                }
+                
+                .project-details {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border: 2px solid #2d5f3f;
+                    margin: 20px 0;
+                    border-radius: 5px;
+                }
+                
+                .detail-row {
+                    display: flex;
+                    margin-bottom: 8px;
+                }
+                
+                .detail-label {
+                    font-weight: bold;
+                    width: 35%;
+                    color: #2d5f3f;
+                }
+                
+                .detail-value {
+                    width: 65%;
+                    border-bottom: 1px dotted #000;
+                    min-height: 20px;
+                }
+                
+                .signatures {
+                    margin-top: 40px;
+                    display: flex;
+                    justify-content: space-between;
+                }
+                
+                .signature-block {
+                    text-align: center;
+                    width: 45%;
+                }
+                
+                .signature-line {
+                    border-bottom: 2px solid #000;
+                    margin-bottom: 5px;
+                    height: 50px;
+                }
+                
+                .signature-title {
+                    font-weight: bold;
+                    font-size: 12px;
+                }
+                
+                .reference-no {
+                    text-align: right;
+                    font-size: 12px;
+                    margin-bottom: 10px;
+                }
+                
+                .date-place {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 30px;
+                    font-weight: bold;
+                }
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {
+                    body { font-size: 12px; }
+                    .container { max-width: none; width: 100%; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="letterhead">
+                    <div class="dept-header">PUBLIC WORKS DEPARTMENT</div>
+                    <div class="govt-header">GOVERNMENT OF RAJASTHAN</div>
+                    <div class="office-header">OFFICE OF THE EXECUTIVE ENGINEER, PWD UDAIPUR</div>
+                </div>
+                
+                <div class="reference-no">
+                    <strong>No. PWD/UDR/CE-II/2025/____</strong>
+                </div>
+                
+                <div class="certificate-title">CERTIFICATE - II</div>
+                <div class="certificate-subtitle">(WORK COMPLETION CERTIFICATE)</div>
+                
+                <div class="content">
+                    <p>This is to <strong>CERTIFY</strong> that the work described in the measurement book and bill has been executed according to the approved drawings, specifications, and technical standards prescribed for the work, and is <strong>COMPLETE IN ALL RESPECTS</strong>.</p>
+                    
+                    <p>The undersigned has carefully inspected the work and found that all items of work have been executed as per the contract agreement and technical specifications approved by the competent authority.</p>
+                </div>
+                
+                <div class="project-details">
+                    <div class="detail-row">
+                        <div class="detail-label">Project Name:</div>
+                        <div class="detail-value">N/A</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Contract Number:</div>
+                        <div class="detail-value">N/A</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Work Order Number:</div>
+                        <div class="detail-value">N/A</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Contractor Name:</div>
+                        <div class="detail-value">N/A</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Work Description:</div>
+                        <div class="detail-value">Infrastructure Development Work</div>
+                    </div>
+                </div>
+                
+                <div class="content">
+                    <p>The work has been executed in accordance with the Indian Standard specifications, PWD Manual, and contract terms and conditions. All safety measures and quality control procedures have been duly followed during the execution of work.</p>
+                    
+                    <p><strong>The work is hereby ACCEPTED</strong> and is fit for the intended use as per the approved project requirements.</p>
+                </div>
+                
+                <div class="date-place">
+                    <div>Date: 21/09/2025</div>
+                    <div>Place: Udaipur</div>
+                </div>
+                
+                <div class="signatures">
+                    <div class="signature-block">
+                        <div class="signature-line"></div>
+                        <div class="signature-title">CONTRACTOR</div>
+                        <div style="font-size: 11px; margin-top: 5px;">(Name & Signature with Seal)</div>
+                    </div>
+                    <div class="signature-block">
+                        <div class="signature-line"></div>
+                        <div class="signature-title">EXECUTIVE ENGINEER</div>
+                        <div style="font-size: 11px; margin-top: 5px;">PWD, Udaipur Division</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; font-size: 10px; font-style: italic;">
+                    <p>This certificate is issued as per PWD Manual provisions and Government of Rajasthan guidelines.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        

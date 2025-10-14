@@ -1,20 +1,49 @@
 import pandas as pd
 import io
-import pandas as pd
 import hashlib
 from typing import Dict, Any
 from functools import lru_cache
 import sys
 import os
+import gc
 
 from .dataframe_safety_utils import DataFrameSafetyUtils
+# Add import for FirstPageGenerator
+from .first_page_generator import FirstPageGenerator
 
 class ExcelProcessor:
     """Handles Excel file processing and data extraction"""
     
+    # Class-level cache for processed files
+    _file_cache = {}
+    _cache_max_size = 75  # Limit cache size to prevent memory issues
+    
     def __init__(self, uploaded_file):
         self.uploaded_file = uploaded_file
         self.workbook = None
+        self._file_hash = None
+    
+    def _get_file_hash(self):
+        """Generate hash for file caching"""
+        if self._file_hash is None:
+            if hasattr(self.uploaded_file, 'read'):
+                # For file-like objects, we can't reliably hash without consuming
+                # So we'll use a combination of size and name if available
+                if hasattr(self.uploaded_file, 'name'):
+                    self._file_hash = f"{getattr(self.uploaded_file, 'name', 'unknown')}_{hash(str(self.uploaded_file))}"
+                else:
+                    self._file_hash = str(id(self.uploaded_file))
+            else:
+                # For file paths, we can hash the file content
+                try:
+                    hash_md5 = hashlib.md5()
+                    with open(self.uploaded_file, "rb") as f:
+                        for chunk in iter(lambda: f.read(4096), b""):
+                            hash_md5.update(chunk)
+                    self._file_hash = hash_md5.hexdigest()
+                except:
+                    self._file_hash = str(self.uploaded_file)
+        return self._file_hash
     
     def process_excel_file(self, uploaded_file) -> Dict[str, Any]:
         """Process Excel file - compatibility method for enhanced_app.py"""
@@ -32,11 +61,20 @@ class ExcelProcessor:
         max_retries = 3
         retry_delay = 1  # seconds
         
+        # Check cache first
+        file_hash = self._get_file_hash()
+        if file_hash in self._file_cache:
+            print("Using cached Excel data")
+            return self._file_cache[file_hash]
+        
         for attempt in range(max_retries):
             try:
                 # Read Excel file - handle both file paths and file-like objects
                 if hasattr(self.uploaded_file, 'read'):
                     # It's a file-like object (like Streamlit uploaded file)
+                    # Reset file pointer to beginning
+                    if hasattr(self.uploaded_file, 'seek'):
+                        self.uploaded_file.seek(0)
                     excel_data = pd.ExcelFile(self.uploaded_file)
                 else:
                     # It's a file path - check if file exists and is accessible
@@ -48,6 +86,10 @@ class ExcelProcessor:
                         raise PermissionError(f"No read permission for file: {self.uploaded_file}")
                     
                     excel_data = pd.ExcelFile(self.uploaded_file)
+                
+                # Cache the result if we have space
+                if len(self._file_cache) < self._cache_max_size:
+                    self._file_cache[file_hash] = excel_data
                 
                 return excel_data
                 
@@ -140,6 +182,9 @@ class ExcelProcessor:
             if (DataFrameSafetyUtils.is_valid_dataframe(data.get('work_order_data')) and 
                 DataFrameSafetyUtils.is_valid_dataframe(data.get('bill_quantity_data'))):
                 print("SUCCESS: All required data extracted successfully")
+                
+                # Force garbage collection after processing
+                gc.collect()
                 return data
             else:
                 raise Exception("No valid data found in required sheets. Please check your Excel file format.")
@@ -147,6 +192,12 @@ class ExcelProcessor:
         except Exception as e:
             print(f"ERROR in process_excel: {str(e)}")
             raise Exception(f"Error processing Excel file: {str(e)}")
+        finally:
+            # Clean up workbook reference
+            if hasattr(self, 'workbook'):
+                del self.workbook
+                self.workbook = None
+            gc.collect()
     
     def _process_title_sheet(self, excel_data) -> Dict[str, str]:
         """Extract metadata from Title sheet"""
@@ -158,13 +209,18 @@ class ExcelProcessor:
             # Convert to dictionary - assuming key-value pairs in adjacent columns
             title_data = {}
             for index, row in title_df.iterrows():
-                if pd.notna(row[0]) and pd.notna(row[1]):
+                # Fix linter error by using scalar boolean check
+                if row[0] is not None and row[0] is not pd.NaT and row[0] is not pd.NA and \
+                   row[1] is not None and row[1] is not pd.NaT and row[1] is not pd.NA:
                     key = str(row[0]).strip()
                     val = str(row[1]).strip()
                     if key and val and key != 'nan' and val != 'nan':
                         title_data[key] = val
             
             print(f"Title data extracted: {title_data}")
+            
+            # Force garbage collection
+            gc.collect()
             return title_data
             
         except Exception as e:
@@ -172,12 +228,33 @@ class ExcelProcessor:
             raise Exception(f"Error processing Title sheet: {str(e)}")
     
     def _process_work_order_sheet(self, excel_data) -> pd.DataFrame:
-        """Extract work order data"""
+        """Extract work order data with memory optimization"""
         try:
-            work_order_df = pd.read_excel(excel_data, sheet_name='Work Order', header=0)
+            # Read with chunking for large files and optimize data types
+            work_order_df = pd.read_excel(
+                excel_data, 
+                sheet_name='Work Order', 
+                header=0,
+                dtype_backend='numpy_nullable'  # Use more memory-efficient data types
+            )
+            
             print(f"Work Order sheet shape: {work_order_df.shape}")
             print(f"Work Order columns: {list(work_order_df.columns)}")
             print(f"First few rows:\n{work_order_df.head()}")
+            
+            # Optimize memory usage by converting data types
+            for col in work_order_df.columns:
+                if work_order_df[col].dtype == 'object':
+                    # Try to convert to category if there are repeated values
+                    unique_vals = work_order_df[col].nunique()
+                    if unique_vals > 0 and unique_vals / len(work_order_df) < 0.5:
+                        work_order_df[col] = work_order_df[col].astype('category')
+                elif work_order_df[col].dtype == 'float64':
+                    # Downcast floats if possible
+                    work_order_df[col] = pd.to_numeric(work_order_df[col], downcast='float')
+                elif work_order_df[col].dtype == 'int64':
+                    # Downcast integers if possible
+                    work_order_df[col] = pd.to_numeric(work_order_df[col], downcast='integer')
             
             # Standardize column names to match expected format
             column_mapping = {
@@ -198,42 +275,9 @@ class ExcelProcessor:
             # Add missing columns with default values
             if 'Quantity Upto' not in work_order_df.columns:
                 work_order_df['Quantity Upto'] = work_order_df.get('Quantity Since', 0)
-            if 'Amount Upto' not in work_order_df.columns:
-                work_order_df['Amount Upto'] = work_order_df.get('Amount Since', 0)
-            if 'Remark' not in work_order_df.columns:
-                work_order_df['Remark'] = ''
             
-            # Find quantity column with flexible naming
-            qty_column = None
-            for col in work_order_df.columns:
-                if 'quantity' in str(col).lower() or 'qty' in str(col).lower():
-                    qty_column = col
-                    break
-            
-            print(f"Using quantity column: {qty_column}")
-            
-            if qty_column:
-                # Preserve main specification items even with zero quantity
-                # Only remove rows that are completely empty or have no description
-                before_count = len(work_order_df)
-                
-                # Keep rows if they have:
-                # 1. Non-zero quantity, OR
-                # 2. A meaningful description (likely main specification), OR
-                # 3. An item number (specification header)
-                mask = (
-                    (pd.notna(work_order_df[qty_column]) & (work_order_df[qty_column] != 0)) |  # Has quantity
-                    (pd.notna(work_order_df.get('Description', pd.Series())) & 
-                     work_order_df.get('Description', pd.Series()).astype(str).str.strip().str.len() > 0) |  # Has description
-                    (pd.notna(work_order_df.get('Item No.', pd.Series())) & 
-                     work_order_df.get('Item No.', pd.Series()).astype(str).str.strip().str.len() > 0)  # Has item number
-                )
-                
-                work_order_df = work_order_df[mask]
-                after_count = len(work_order_df)
-                print(f"Smart filtered rows: {before_count} -> {after_count} (preserved main specifications)")
-            
-            print(f"Final Work Order data shape: {work_order_df.shape}")
+            # Force garbage collection
+            gc.collect()
             return work_order_df
             
         except Exception as e:
@@ -241,9 +285,84 @@ class ExcelProcessor:
             raise Exception(f"Error processing Work Order sheet: {str(e)}")
     
     def _process_bill_quantity_sheet(self, excel_data) -> pd.DataFrame:
-        """Extract bill quantity data"""
+        """Extract bill quantity data with memory optimization"""
         try:
-            bill_qty_df = pd.read_excel(excel_data, sheet_name='Bill Quantity', header=0)
+            # Read with optimized data types
+            bill_quantity_df = pd.read_excel(
+                excel_data, 
+                sheet_name='Bill Quantity', 
+                header=0,
+                dtype_backend='numpy_nullable'  # Use more memory-efficient data types
+            )
+            
+            print(f"Bill Quantity sheet shape: {bill_quantity_df.shape}")
+            print(f"Bill Quantity columns: {list(bill_quantity_df.columns)}")
+            
+            # Optimize memory usage by converting data types
+            for col in bill_quantity_df.columns:
+                if bill_quantity_df[col].dtype == 'object':
+                    # Try to convert to category if there are repeated values
+                    unique_vals = bill_quantity_df[col].nunique()
+                    if unique_vals > 0 and unique_vals / len(bill_quantity_df) < 0.5:
+                        bill_quantity_df[col] = bill_quantity_df[col].astype('category')
+                elif bill_quantity_df[col].dtype == 'float64':
+                    # Downcast floats if possible
+                    bill_quantity_df[col] = pd.to_numeric(bill_quantity_df[col], downcast='float')
+                elif bill_quantity_df[col].dtype == 'int64':
+                    # Downcast integers if possible
+                    bill_quantity_df[col] = pd.to_numeric(bill_quantity_df[col], downcast='integer')
+            
+            # Standardize column names to match expected format
+            column_mapping = {
+                'Item': 'Item No.',
+                'Description': 'Description',
+                'Unit': 'Unit',
+                'Quantity': 'Quantity',  # Keep as is for bill quantity
+                'Rate': 'Rate',
+                'Amount': 'Amount'
+            }
+            
+            # Rename columns if they exist
+            for old_col, new_col in column_mapping.items():
+                if old_col in bill_quantity_df.columns:
+                    bill_quantity_df = bill_quantity_df.rename(columns={old_col: new_col})
+                    print(f"Renamed column: {old_col} -> {new_col}")
+            
+            # Force garbage collection
+            gc.collect()
+            return bill_quantity_df
+            
+        except Exception as e:
+            print(f"Error in _process_bill_quantity_sheet: {str(e)}")
+            raise Exception(f"Error processing Bill Quantity sheet: {str(e)}")
+    
+    def _process_extra_items_sheet(self, excel_data) -> pd.DataFrame:
+        """Extract extra items data with memory optimization"""
+        try:
+            # Read with optimized data types
+            extra_items_df = pd.read_excel(
+                excel_data, 
+                sheet_name='Extra Items', 
+                header=0,
+                dtype_backend='numpy_nullable'  # Use more memory-efficient data types
+            )
+            
+            print(f"Extra Items sheet shape: {extra_items_df.shape}")
+            print(f"Extra Items columns: {list(extra_items_df.columns)}")
+            
+            # Optimize memory usage by converting data types
+            for col in extra_items_df.columns:
+                if extra_items_df[col].dtype == 'object':
+                    # Try to convert to category if there are repeated values
+                    unique_vals = extra_items_df[col].nunique()
+                    if unique_vals > 0 and unique_vals / len(extra_items_df) < 0.5:
+                        extra_items_df[col] = extra_items_df[col].astype('category')
+                elif extra_items_df[col].dtype == 'float64':
+                    # Downcast floats if possible
+                    extra_items_df[col] = pd.to_numeric(extra_items_df[col], downcast='float')
+                elif extra_items_df[col].dtype == 'int64':
+                    # Downcast integers if possible
+                    extra_items_df[col] = pd.to_numeric(extra_items_df[col], downcast='integer')
             
             # Standardize column names to match expected format
             column_mapping = {
@@ -257,109 +376,14 @@ class ExcelProcessor:
             
             # Rename columns if they exist
             for old_col, new_col in column_mapping.items():
-                if old_col in bill_qty_df.columns:
-                    bill_qty_df = bill_qty_df.rename(columns={old_col: new_col})
-            
-            # Find quantity column with flexible naming
-            qty_column = None
-            for col in bill_qty_df.columns:
-                if 'quantity' in str(col).lower() or 'qty' in str(col).lower():
-                    qty_column = col
-                    break
-            
-            if qty_column:
-                # Preserve main specification items even with zero quantity
-                # Keep rows if they have:
-                # 1. Non-zero quantity, OR
-                # 2. A meaningful description (likely main specification), OR
-                # 3. An item number (specification header)
-                mask = (
-                    (pd.notna(bill_qty_df[qty_column]) & (bill_qty_df[qty_column] != 0)) |  # Has quantity
-                    (pd.notna(bill_qty_df.get('Description', pd.Series())) & 
-                     bill_qty_df.get('Description', pd.Series()).astype(str).str.strip().str.len() > 0) |  # Has description
-                    (pd.notna(bill_qty_df.get('Item No.', pd.Series())) & 
-                     bill_qty_df.get('Item No.', pd.Series()).astype(str).str.strip().str.len() > 0)  # Has item number
-                )
-                
-                bill_qty_df = bill_qty_df[mask]
-                print(f"Smart filtered bill quantity rows (preserved main specifications)")
-            
-            return bill_qty_df
-            
-        except Exception as e:
-            raise Exception(f"Error processing Bill Quantity sheet: {str(e)}")
-    
-    def _process_extra_items_sheet(self, excel_data) -> pd.DataFrame:
-        """Extract extra items data"""
-        try:
-            # Try to read with different header rows since the format is inconsistent
-            extra_items_df = None
-            
-            # First try with header=0
-            try:
-                extra_items_df = pd.read_excel(excel_data, sheet_name='Extra Items', header=0)
-                # Check if we have meaningful column names
-                if all('Unnamed' in str(col) for col in extra_items_df.columns):
-                    extra_items_df = None
-            except:
-                pass
-            
-            # If that didn't work, try with header=1 or 2
-            if extra_items_df is None:
-                for header_row in [1, 2, 3]:
-                    try:
-                        extra_items_df = pd.read_excel(excel_data, sheet_name='Extra Items', header=header_row)
-                        # Check if we have meaningful column names
-                        if not all('Unnamed' in str(col) for col in extra_items_df.columns):
-                            break
-                    except:
-                        continue
-            
-            # If still no good data, return empty DataFrame
-            if extra_items_df is None or extra_items_df.empty:
-                return pd.DataFrame()
-            
-            # Standardize column names
-            column_mapping = {
-                'Item': 'Item No.',
-                'Description': 'Description', 
-                'Unit': 'Unit',
-                'Quantity': 'Quantity',
-                'Rate': 'Rate',
-                'Amount': 'Amount'
-            }
-            
-            # Rename columns if they exist
-            for old_col, new_col in column_mapping.items():
                 if old_col in extra_items_df.columns:
                     extra_items_df = extra_items_df.rename(columns={old_col: new_col})
+                    print(f"Renamed column: {old_col} -> {new_col}")
             
-            # Find quantity column with flexible naming
-            qty_column = None
-            for col in extra_items_df.columns:
-                if 'quantity' in str(col).lower() or 'qty' in str(col).lower():
-                    qty_column = col
-                    break
-            
-            if qty_column:
-                # Preserve main specification items even with zero quantity
-                # Keep rows if they have:
-                # 1. Non-zero quantity, OR
-                # 2. A meaningful description (likely main specification), OR
-                # 3. An item number (specification header)
-                mask = (
-                    (pd.notna(extra_items_df[qty_column]) & (extra_items_df[qty_column] != 0)) |  # Has quantity
-                    (pd.notna(extra_items_df.get('Description', pd.Series())) & 
-                     extra_items_df.get('Description', pd.Series()).astype(str).str.strip().str.len() > 0) |  # Has description
-                    (pd.notna(extra_items_df.get('Item No.', pd.Series())) & 
-                     extra_items_df.get('Item No.', pd.Series()).astype(str).str.strip().str.len() > 0)  # Has item number
-                )
-                
-                extra_items_df = extra_items_df[mask]
-                print(f"Smart filtered extra items rows (preserved main specifications)")
-            
+            # Force garbage collection
+            gc.collect()
             return extra_items_df
             
         except Exception as e:
-            # Return empty DataFrame instead of raising exception for optional sheet
-            return pd.DataFrame()
+            print(f"Error in _process_extra_items_sheet: {str(e)}")
+            raise Exception(f"Error processing Extra Items sheet: {str(e)}")

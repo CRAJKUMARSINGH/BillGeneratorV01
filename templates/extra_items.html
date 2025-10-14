@@ -1,90 +1,47 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Extra Items</title>
     <style>
-        @page { size: A4; margin: 10mm; }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            font-size: 8pt;
-        }
-        .container {
-            margin: 10mm;
-            width: calc(100% - 20mm);
-            min-height: calc(100vh - 20mm);
-            box-sizing: border-box;
-        }
-        h2 { text-align: center; margin: 0 0 10mm 0; font-size: 14pt; }
-        .table-wrapper {
-            width: 100%;
-            overflow: hidden;
-            border: 1px solid black;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin: 0 auto;
-            border: 1px solid black;
-        }
-        thead { display: table-header-group; }
-        tr { break-inside: avoid; }
-        th, td {
-            border: 1px solid black;
-            padding: 5px;
-            font-size: 8pt;
-            vertical-align: top;
-            word-wrap: break-word;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-align: center;
-        }
+        body { font-family: Arial, sans-serif; font-size: 10pt; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 5px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Extra Items</h2>
-        <div class="table-wrapper">
-            <table>
-            <thead>
-                <tr>
-                    <th>Serial No.</th>
-                    <th>Remark</th>
-                    <th>Description</th>
-                    <th>Quantity</th>
-                    <th>Unit</th>
-                    <th>Rate</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if extra_items and extra_items|length > 0 %}
-                    {% for item in extra_items %}
-                        <tr>
-                            <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else loop.index }}</td>
-                            <td>{{ item.remark if item.remark else 'Extra Work' }}</td>
-                            <td>{{ item.description if item.description else 'N/A' }}</td>
-                            <td>{{ item.quantity | round(2) if item.quantity else "" }}</td>
-                            <td>{{ item.unit if item.unit else "" }}</td>
-                            <td>{{ item.rate | round(2) if item.rate else "" }}</td>
-                            <td>{{ item.amount | round(2) if item.amount else "" }}</td>
-                        </tr>
-                    {% endfor %}
-                {% else %}
+    <h2>Extra Items</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Serial No.</th>
+                <th>Remark</th>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Rate</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if data.items and data.items is iterable %}
+                {% for item in data.items %}
                     <tr>
-                        <td colspan="7" style="text-align: center; font-style: italic;">No extra items</td>
+                        <td>{{ item.serial_no | default("") }}</td>
+                        <td>{{ item.remark | default("") }}</td>
+                        <td>{{ item.description | default("") }}</td>
+                        <td>{{ item.quantity | default("") }}</td>
+                        <td>{{ item.unit | default("") }}</td>
+                        <td>{{ item.rate | default("") }}</td>
+                        <td>{{ item.amount | default("") }}</td>
                     </tr>
-                {% endif %}
-            </tbody>
-            </table>
-        </div>
-    </div>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="7">No extra items available</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
 </body>
 </html>

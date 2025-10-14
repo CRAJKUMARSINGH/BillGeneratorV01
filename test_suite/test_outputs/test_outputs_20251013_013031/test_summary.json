@@ -1,0 +1,21 @@
+{
+  "test_run": "2025-10-13T01:30:33.463016",
+  "output_directory": "test_outputs_20251013_013031",
+  "total_files": 11,
+  "successful": 11,
+  "failed": 0,
+  "success_rate": 1.0,
+  "processed_files": [
+    "test_input_files\\3rdFinalNoExtra.xlsx",
+    "test_input_files\\3rdFinalVidExtra.xlsx",
+    "test_input_files\\3rdRunningNoExtra.xlsx",
+    "test_input_files\\3rdRunningVidExtra.xlsx",
+    "test_input_files\\FirstFINALnoExtra.xlsx",
+    "test_input_files\\FirstFINALvidExtra.xlsx",
+    "test_input_files\\hierarchical_test_structure.xlsx",
+    "test_input_files\\new_t01plus.xlsx",
+    "test_input_files\\new_t01plusFINAL.xlsx",
+    "test_input_files\\new_t01plusFirst_FINAL.xlsx",
+    "test_input_files\\new_t01plusOTHER_FINAL.xlsx"
+  ]
+}

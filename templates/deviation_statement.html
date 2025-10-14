@@ -1,171 +1,118 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Deviation Statement</title>
     <style>
-        @page { size: A4 landscape; margin: 10mm; }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            font-size: 8pt;
-        }
-        .container {
-            margin: 10mm;
-            width: calc(100% - 20mm);
-            min-height: calc(100vh - 20mm);
-            box-sizing: border-box;
-        }
-        h2 { text-align: center; margin: 0 0 10mm 0; font-size: 14pt; }
-        p { margin: 2mm 0; font-size: 9pt; }
-        .table-wrapper {
-            width: 100%;
-            overflow: hidden;
-            border: 1px solid black;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin: 0 auto;
-            border: 1px solid black;
-        }
-        thead { display: table-header-group; }
-        tr { break-inside: avoid; }
-        th, td {
-            border: 1px solid black;
-            padding: 3px;
-            font-size: 7pt;
-            vertical-align: top;
-            word-wrap: break-word;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-align: center;
-        }
+        body { font-family: Arial, sans-serif; font-size: 10pt; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 5px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
         .bold { font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Deviation Statement</h2>
-        <p>Agreement No: {{ title_data.get('Agreement No.', 'N/A') }}</p>
-        <p>Name of Work: {{ title_data.get('Name of Work ;-', 'N/A') }}</p>
-        
-        <div class="table-wrapper">
-            <table>
-                <thead>
+    <h2>Deviation Statement</h2>
+    <p>Agreement No: {{ header_data[12][4] if header_data and header_data | length > 12 and header_data[12] | length > 4 else '48/2024-25' }}</p>
+    <p>Name of Work: {{ header_data[8][1] if header_data and header_data | length > 8 and header_data[8] | length > 1 else 'Electric Repair and MTC work at Govt. Ambedkar hostel Ambamata, Govardhanvilas, Udaipur' }}</p>
+    <table>
+        <thead>
+            <tr>
+                <th>ITEM No.</th>
+                <th>Description</th>
+                <th>Unit</th>
+                <th>Qty as per Work Order</th>
+                <th>Rate</th>
+                <th>Amt as per Work Order Rs.</th>
+                <th>Qty Executed</th>
+                <th>Amt as per Executed Rs.</th>
+                <th>Excess Qty</th>
+                <th>Excess Amt Rs.</th>
+                <th>Saving Qty</th>
+                <th>Saving Amt Rs.</th>
+                <th>REMARKS/ REASON</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if data['items'] and data['items'] is iterable and data['items'] | length > 0 %}
+                {% for item in data['items'] %}
                     <tr>
-                        <th>ITEM No.</th>
-                        <th>Description</th>
-                        <th>Unit</th>
-                        <th>Qty as per Work Order</th>
-                        <th>Rate</th>
-                        <th>Amt as per Work Order Rs.</th>
-                        <th>Qty Executed</th>
-                        <th>Amt as per Executed Rs.</th>
-                        <th>Excess Qty</th>
-                        <th>Excess Amt Rs.</th>
-                        <th>Saving Qty</th>
-                        <th>Saving Amt Rs.</th>
-                        <th>REMARKS/ REASON</th>
+                        <td>{{ item.serial_no | default("") }}</td>
+                        <td>{{ item.description | default("") }}</td>
+                        <td>{{ item.unit | default("") }}</td>
+                        <td>{{ item.qty_wo if item.unit|trim else "" }}</td>
+                        <td>{{ item.rate if item.unit|trim else "" }}</td>
+                        <td>{{ item.amt_wo if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.qty_bill if item.unit|trim else "" }}</td>
+                        <td>{{ item.amt_bill if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.excess_qty if item.unit|trim else "" }}</td>
+                        <td>{{ item.excess_amt if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.saving_qty if item.unit|trim else "" }}</td>
+                        <td>{{ item.saving_amt if item.unit|trim and item.rate|trim else "" }}</td>
+                        <td>{{ item.remark | default("") }}</td>
                     </tr>
-                </thead>
-                <tbody>
-        {% for item in work_items %}
-        <tr>
-            <td>{{ item.serial_no if item.serial_no and item.serial_no != 'nan' else '' }}</td>
-            <td>{{ item.description }}</td>
-            <td>{{ item.unit }}</td>
-            <td>{{ "%.2f" | format(item.qty_wo) if item.qty_wo else "" }}</td>
-            <td>{{ "%.2f" | format(item.rate) if item.rate else "" }}</td>
-            <td>{{ "%.2f" | format(item.amt_wo) if item.amt_wo else "" }}</td>
-            <td>{{ "%.2f" | format(item.qty_bill) if item.qty_bill else "" }}</td>
-            <td>{{ "%.2f" | format(item.amt_bill) if item.amt_bill else "" }}</td>
-            <td>{{ "%.2f" | format(item.excess_qty) if item.excess_qty else "" }}</td>
-            <td>{{ "%.2f" | format(item.excess_amt) if item.excess_amt else "" }}</td>
-            <td>{{ "%.2f" | format(item.saving_qty) if item.saving_qty else "" }}</td>
-            <td>{{ "%.2f" | format(item.saving_amt) if item.saving_amt else "" }}</td>
-            <td>{{ item.remark }}</td>
-        </tr>
-        {% endfor %}
-        <tr>
-            <td colspan="9"><strong>Summary</strong></td>
-        </tr>
-        <tr>
-            <td colspan="5"><strong>Total Work Order Amount</strong></td>
-            <td>{{ "%.2f" | format(totals.grand_total) if totals.grand_total else "" }}</td>
-            <td colspan="7"></td>
-        </tr>
-        <tr>
-            <td colspan="5"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(totals.tender_premium_amount or 0) }}</td>
-            <td colspan="7"></td>
-        </tr>
-        <tr>
-            <td colspan="5"><strong>Grand Total Work Order</strong></td>
-            <td>{{ "%.2f" | format(totals.final_total or 0) }}</td>
-            <td colspan="7"></td>
-        </tr>
-        <tr>
-            <td colspan="7"><strong>Total Executed Amount</strong></td>
-            <td>{{ "%.2f" | format(totals.grand_total or 0) }}</td>
-            <td colspan="5"></td>
-        </tr>
-        <tr>
-            <td colspan="7"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(totals.tender_premium_amount or 0) }}</td>
-            <td colspan="5"></td>
-        </tr>
-        <tr>
-            <td colspan="7"><strong>Grand Total Executed</strong></td>
-            <td>{{ "%.2f" | format(totals.final_total or 0) }}</td>
-            <td colspan="5"></td>
-        </tr>
-        <tr>
-            <td colspan="9"><strong>Excess</strong></td>
-        </tr>
-        <tr>
-            <td colspan="9"><strong>Total Excess Amount</strong></td>
-            <td>{{ "%.2f" | format(totals.excess_amount or 0) }}</td>
-            <td colspan="3"></td>
-        </tr>
-        <tr>
-            <td colspan="9"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(totals.excess_premium or 0) }}</td>
-            <td colspan="3"></td>
-        </tr>
-        <tr>
-            <td colspan="9"><strong>Grand Total Excess</strong></td>
-            <td>{{ "%.2f" | format(totals.excess_total or 0) }}</td>
-            <td colspan="3"></td>
-        </tr>
-        <tr>
-            <td colspan="11"><strong>Saving</strong></td>
-        </tr>
-        <tr>
-            <td colspan="11"><strong>Total Saving Amount</strong></td>
-            <td>{{ "%.2f" | format(totals.saving_amount or 0) }}</td>
-        </tr>
-        <tr>
-            <td colspan="11"><strong>Tender Premium @ {{ "%.2f%%" | format((totals.tender_premium_percent or 0) * 100) }}</strong></td>
-            <td>{{ "%.2f" | format(totals.saving_premium or 0) }}</td>
-        </tr>
-        <tr>
-            <td colspan="11"><strong>Grand Total Saving</strong></td>
-            <td>{{ "%.2f" | format(totals.saving_total or 0) }}</td>
-        </tr>
-        <tr>
-            <td colspan="11"><strong>Net Difference</strong></td>
-            <td>{{ "%.2f" | format(totals.net_difference or 0) }}</td>
-        </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="13">No deviation items available</td></tr>
+            {% endif %}
+            {% if data.summary and data.summary is mapping %}
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">Grand Total Rs.</td>
+                    <td></td>
+                    <td>{{ data.summary.work_order_total | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.executed_total | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.overall_excess | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.overall_saving | default("") }}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">Add Tender Premium ({{ "%.2f%%" % (data.summary.premium.percent * 100 if data.summary.premium.percent is defined else 0) }})</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_f | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_h | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_j | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.tender_premium_l | default("") }}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">Grand Total including Tender Premium Rs.</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_f | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_h | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_j | default("") }}</td>
+                    <td></td>
+                    <td>{{ data.summary.grand_total_l | default("") }}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td class="bold">
+                        {% if data.summary.net_difference is defined and data.summary.net_difference > 0 %}
+                            Overall Excess With Respect to the Work Order Amount Rs.
+                        {% else %}
+                            Overall Saving With Respect to the Work Order Amount Rs.
+                        {% endif %}
+                    </td>
+                    <td colspan="3"></td>
+                    <td>{{ data.summary.net_difference | default("") }}</td>
+                    <td colspan="5"></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="13">No summary data available</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
 </body>
 </html>

@@ -1,0 +1,125 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Extra Items Statement</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                }
+                
+                .container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }
+                
+                th, td {
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                }
+                
+                th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }
+                
+                .amount {
+                    text-align: right;
+                }
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {
+                    body { font-size: 12px; }
+                    .container { max-width: none; width: 100%; }
+                    table { page-break-inside: auto; }
+                    tr { page-break-inside: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>Extra Items Statement</h2>
+                <p><strong>Date:</strong> 21/09/2025</p>
+        
+                <h3>Extra Items</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item No.</th>
+                            <th>Description</th>
+                            <th>Unit</th>
+                            <th>Quantity</th>
+                            <th>Rate</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                        </tr>
+                
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                        </tr>
+                
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                        </tr>
+                
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                        </tr>
+                
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                        </tr>
+                
+                        <tr style="font-weight: bold;">
+                            <td colspan="5">TOTAL</td>
+                            <td class="amount">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            
+            </div>
+        </body>
+        </html>
+        

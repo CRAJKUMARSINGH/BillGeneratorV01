@@ -1,0 +1,9 @@
+Key Validation Question
+
+Have you ensured that, for the First Page – Deviation and Extra Item section, if the “Rate” column in the Work Order sheet is blank or zero, only the following data are populated?
+
+Serial Number
+
+Item / Specification / Description
+
+All other columns in that row must remain blank.

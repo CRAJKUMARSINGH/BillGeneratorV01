@@ -1,0 +1,124 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Final Bill Scrutiny Sheet</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    font-size: 14px;
+                }
+                
+                .container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }
+                
+                th, td {
+                    padding: 12px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                }
+                
+                th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }
+                
+                .amount {
+                    text-align: right;
+                }
+                
+                /* CRITICAL: Print-specific styles */
+                @media print {
+                    body { font-size: 12px; }
+                    .container { max-width: none; width: 100%; }
+                    table { page-break-inside: auto; }
+                    tr { page-break-inside: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>Final Bill Scrutiny Sheet</h2>
+                <p><strong>Date:</strong> 21/09/2025</p>
+                
+                <h3>Bill Summary</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item No.</th>
+                            <th>Description</th>
+                            <th>Unit</th>
+                            <th>Quantity</th>
+                            <th>Rate</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        
+                        <tr>
+                            <td>1.0</td>
+                            <td>Rewiring of light point/ fan point/ exhaust fan point/ call bell point with 1.5 sq. mm nominal size FR PVC insulated unsheathed flexible copper conductor 1.1 kV grade  and 1.5 sq. mm nominal size FR PVC insulated unsheathed flexible copper earth conductor 1.1 kV grade (IS:694) in recessed  ISI marked MMS ( IS:9537 P - III ) virgin material PVC conduit & it's ISI marked (IS:3419-1988) accessories, round tiles, 1.2 mm thick MS box with earth terminal, 6 A switch, 3 pin ceiling rose/holder / 3 way connector , 3.0 mm thick ISI marked (IS:2036-1995) phenolic laminated sheet, Al.alloy / Cadmium plated iron/  brass  screws, cup washers, making connections, testing etc. as required. For specification of copper  Conductor,  Phenolic Laminated sheet's & Electrical/ Wiring accessories refer Chapter E - 04, E - 05 & E - 07 For additional technical parameters of product / work refer Annexure 'A' attached with this BSR</td>
+                            <td></td>
+                            <td class="amount">10.00</td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                        </tr>
+            
+                        <tr>
+                            <td></td>
+                            <td>Short point (up to 3 mtr.)</td>
+                            <td>P. point</td>
+                            <td class="amount">11.00</td>
+                            <td class="amount">256.00</td>
+                            <td class="amount">2816.00</td>
+                        </tr>
+            
+                        <tr>
+                            <td></td>
+                            <td>Medium point (up to 6 mtr.)</td>
+                            <td>P. point</td>
+                            <td class="amount">12.00</td>
+                            <td class="amount">472.00</td>
+                            <td class="amount">5664.00</td>
+                        </tr>
+            
+                        <tr>
+                            <td></td>
+                            <td>Long point  (up to 10 mtr.)</td>
+                            <td>P. point</td>
+                            <td class="amount">13.00</td>
+                            <td class="amount">662.00</td>
+                            <td class="amount">8606.00</td>
+                        </tr>
+            
+                        <tr>
+                            <td>2.0</td>
+                            <td>Rewiring of 3/5 pin 6 amp. Light plug point with 1.5 sq. mm nominal size  FR PVC insulated unsheathed flexible copper conductor 1.1 kV grade  and 1.5 sq. mm nominal size FR PVC insulated unsheathed flexible copper earth conductor 1.1 kV grade(IS:694)   in recessed ISI marked MMS ( IS:9537 P - III ) virgin material  PVC conduit & it's  ISI marked (IS:3419-1988) accessories, 1.2 mm thick  MS box with earth terminal of required size,  6 A  switch, 3/5 pin 6 A socket, 3.0 mm thick ISI marked (IS:2036-1995) phenolic laminated sheet, Al.alloy / Cadmium plated iron/ brass  screws, cup washers, making connections, testing etc. as required.  For specification of copper  Conductor,  Phenolic Laminated sheet's & Electrical/ Wiring accessories refer Chapter E - 04, E - 05 & E - 07 For additional technical parameters of product / work refer Annexure 'A' attached with this BSR</td>
+                            <td></td>
+                            <td class="amount">14.00</td>
+                            <td class="amount"></td>
+                            <td class="amount"></td>
+                        </tr>
+            
+                        <tr style="font-weight: bold;">
+                            <td colspan="5">TOTAL</td>
+                            <td class="amount">17086</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>
+        

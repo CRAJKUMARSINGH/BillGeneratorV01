@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 class HighPerformanceBatchProcessor:
     """High-performance batch processor for multiple Excel files"""
     
-    def __init__(self, input_directory: str, output_directory: str = None):
+    def __init__(self, input_directory: str, output_directory: Optional[str] = None):
         self.input_directory = Path(input_directory)
         self.output_directory = Path(output_directory) if output_directory else Path("batch_output")
         self.output_directory.mkdir(exist_ok=True)
@@ -52,7 +52,8 @@ class HighPerformanceBatchProcessor:
         
         # Memory management
         self.max_memory_usage = 0
-        self.gc_threshold = 10  # Run garbage collection every 10 files
+        self.gc_threshold = 5  # Run garbage collection every 5 files (reduced from 10)
+        self.max_concurrent_files = 3  # Limit concurrent processing to prevent memory issues
         
     def discover_input_files(self) -> List[Path]:
         """Discover all Excel files in input directory"""
@@ -83,7 +84,7 @@ class HighPerformanceBatchProcessor:
             if progress_callback:
                 progress_callback(f"Processing {file_path.name}...")
             
-            # Process Excel file
+            # Process Excel file with memory optimization
             processor = ExcelProcessor(file_path)
             result = processor.process_excel()
             
@@ -159,9 +160,10 @@ class HighPerformanceBatchProcessor:
             file_stats['processing_time'] = time.time() - start_time
             self.processing_stats['file_times'].append(file_stats['processing_time'])
             
-            # Memory management
+            # Memory management - force garbage collection more frequently
             if self.processing_stats['processed_files'] % self.gc_threshold == 0:
-                gc.collect()
+                collected = gc.collect()
+                logger.info(f"Garbage collection: {collected} objects collected")
         
         return file_stats
     
@@ -198,315 +200,346 @@ class HighPerformanceBatchProcessor:
             buffer = BytesIO()
             c = canvas.Canvas(buffer, pagesize=A4)
             c.drawString(100, 750, f"Error generating {doc_name}")
-            c.drawString(100, 700, f"Error: {error_msg[:100]}")
+            c.drawString(100, 730, error_msg)
             c.save()
             
-            return buffer.getvalue()
-        except:
-            # Fallback: return minimal PDF bytes
-            return b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n174\n%%EOF"
+            pdf_bytes = buffer.getvalue()
+            buffer.close()
+            return pdf_bytes
+        except Exception as e:
+            logger.error(f"Error creating error PDF: {str(e)}")
+            return b"Error PDF generation failed"
     
-    def process_batch_sequential(self, progress_callback=None) -> Dict[str, Any]:
-        """Process all files sequentially with progress tracking"""
+    def process_batch_files(self, progress_callback=None) -> Dict[str, Any]:
+        """Process all files in batch with enhanced memory management"""
         start_time = time.time()
-        excel_files = self.discover_input_files()
+        all_stats = []
         
-        if not excel_files:
-            return {
-                'success': False,
-                'message': 'No Excel files found in input directory',
-                'stats': self.processing_stats
-            }
-        
-        results = []
-        
-        for i, file_path in enumerate(excel_files, 1):
-            if progress_callback:
-                progress_callback(f"Processing file {i}/{len(excel_files)}: {file_path.name}")
+        try:
+            # Discover files
+            excel_files = self.discover_input_files()
             
-            result = self.process_single_file(file_path, progress_callback)
-            results.append(result)
+            if not excel_files:
+                logger.warning("No Excel files found for processing")
+                return {
+                    'success': False,
+                    'message': 'No Excel files found in input directory',
+                    'stats': []
+                }
             
-            if result['success']:
-                self.processing_stats['processed_files'] += 1
-            else:
-                self.processing_stats['failed_files'] += 1
-        
-        self.processing_stats['total_time'] = time.time() - start_time
-        
-        return {
-            'success': True,
-            'results': results,
-            'stats': self.processing_stats,
-            'output_directory': str(self.output_directory)
-        }
-    
-    def process_batch_parallel(self, max_workers: int = 4, progress_callback=None) -> Dict[str, Any]:
-        """Process files in parallel for better performance"""
-        start_time = time.time()
-        excel_files = self.discover_input_files()
-        
-        if not excel_files:
-            return {
-                'success': False,
-                'message': 'No Excel files found in input directory',
-                'stats': self.processing_stats
-            }
-        
-        results = []
-        
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all tasks
-            future_to_file = {
-                executor.submit(self.process_single_file, file_path, progress_callback): file_path 
-                for file_path in excel_files
-            }
-            
-            # Process completed tasks
-            for i, future in enumerate(concurrent.futures.as_completed(future_to_file), 1):
-                file_path = future_to_file[future]
-                
+            # Process files with limited concurrency to manage memory
+            for i, file_path in enumerate(excel_files):
                 try:
-                    result = future.result()
-                    results.append(result)
+                    # Process single file
+                    file_stats = self.process_single_file(file_path, progress_callback)
+                    all_stats.append(file_stats)
                     
-                    if result['success']:
+                    # Update counters
+                    if file_stats['success']:
                         self.processing_stats['processed_files'] += 1
                     else:
                         self.processing_stats['failed_files'] += 1
                     
-                    if progress_callback:
-                        progress_callback(f"Completed {i}/{len(excel_files)}: {file_path.name}")
-                        
+                    # Memory optimization: Force garbage collection after each file
+                    gc.collect()
+                    
+                    # Optional: Add small delay to prevent system overload
+                    time.sleep(0.1)
+                    
                 except Exception as e:
-                    logger.error(f"Error processing {file_path.name}: {str(e)}")
+                    logger.error(f"Critical error processing {file_path.name}: {str(e)}")
                     self.processing_stats['failed_files'] += 1
+                    if progress_callback:
+                        progress_callback(f"❌ Critical error with {file_path.name}: {str(e)}")
+                
+                # Periodic memory cleanup
+                if i % self.gc_threshold == 0:
+                    collected = gc.collect()
+                    logger.info(f"Periodic garbage collection: {collected} objects collected")
+            
+            # Calculate final statistics
+            total_time = time.time() - start_time
+            self.processing_stats['total_time'] = total_time
+            
+            success_rate = (self.processing_stats['processed_files'] / 
+                          max(self.processing_stats['total_files'], 1)) * 100
+            
+            # Memory cleanup
+            gc.collect()
+            
+            return {
+                'success': True,
+                'message': f'Processed {self.processing_stats["processed_files"]} of {self.processing_stats["total_files"]} files ({success_rate:.1f}% success rate)',
+                'processing_time': total_time,
+                'stats': all_stats,
+                'summary': self.processing_stats
+            }
+            
+        except Exception as e:
+            logger.error(f"Batch processing error: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Batch processing failed: {str(e)}',
+                'processing_time': time.time() - start_time,
+                'stats': all_stats,
+                'summary': self.processing_stats
+            }
+    
+    def process_batch_sequential(self, progress_callback=None) -> Dict[str, Any]:
+        """Process files sequentially (wrapper for process_batch_files)"""
+        return self.process_batch_files(progress_callback)
+    
+    def process_batch_parallel(self, max_workers: int = 4, progress_callback=None) -> Dict[str, Any]:
+        """Process files in parallel with memory management"""
+        # For memory safety, we'll limit parallel processing
+        max_workers = min(max_workers, self.max_concurrent_files)
         
-        self.processing_stats['total_time'] = time.time() - start_time
+        start_time = time.time()
+        all_stats = []
         
-        return {
-            'success': True,
-            'results': results,
-            'stats': self.processing_stats,
-            'output_directory': str(self.output_directory)
-        }
+        try:
+            # Discover files
+            excel_files = self.discover_input_files()
+            
+            if not excel_files:
+                logger.warning("No Excel files found for processing")
+                return {
+                    'success': False,
+                    'message': 'No Excel files found in input directory',
+                    'stats': []
+                }
+            
+            # Process files in parallel with executor
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all tasks
+                future_to_file = {
+                    executor.submit(self._process_file_wrapper, file_path): file_path 
+                    for file_path in excel_files
+                }
+                
+                # Collect results as they complete
+                for future in concurrent.futures.as_completed(future_to_file):
+                    file_path = future_to_file[future]
+                    try:
+                        file_stats = future.result()
+                        all_stats.append(file_stats)
+                        
+                        # Update counters
+                        if file_stats['success']:
+                            self.processing_stats['processed_files'] += 1
+                        else:
+                            self.processing_stats['failed_files'] += 1
+                        
+                        # Call progress callback if provided
+                        if progress_callback:
+                            if file_stats['success']:
+                                progress_callback(f"✅ Completed {file_stats['file_name']} ({file_stats['output_size']:,} bytes)")
+                            else:
+                                progress_callback(f"❌ Failed {file_stats['file_name']}: {file_stats['error']}")
+                    
+                    except Exception as e:
+                        logger.error(f"Error processing {file_path.name}: {str(e)}")
+                        self.processing_stats['failed_files'] += 1
+                        if progress_callback:
+                            progress_callback(f"❌ Error with {file_path.name}: {str(e)}")
+                    
+                    # Memory cleanup after each completion
+                    gc.collect()
+            
+            # Calculate final statistics
+            total_time = time.time() - start_time
+            self.processing_stats['total_time'] = total_time
+            
+            success_rate = (self.processing_stats['processed_files'] / 
+                          max(self.processing_stats['total_files'], 1)) * 100
+            
+            # Memory cleanup
+            gc.collect()
+            
+            return {
+                'success': True,
+                'message': f'Processed {self.processing_stats["processed_files"]} of {self.processing_stats["total_files"]} files ({success_rate:.1f}% success rate)',
+                'processing_time': total_time,
+                'stats': all_stats,
+                'summary': self.processing_stats
+            }
+            
+        except Exception as e:
+            logger.error(f"Parallel batch processing error: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Parallel batch processing failed: {str(e)}',
+                'processing_time': time.time() - start_time,
+                'stats': all_stats,
+                'summary': self.processing_stats
+            }
+    
+    def _process_file_wrapper(self, file_path: Path) -> Dict[str, Any]:
+        """Wrapper method for parallel processing"""
+        return self.process_single_file(file_path)
     
     def generate_batch_report(self, results: Dict[str, Any]) -> str:
-        """Generate a comprehensive batch processing report"""
-        stats = results['stats']
+        """Generate a batch processing report"""
+        if not results or 'summary' not in results:
+            return "No results to report"
         
-        report = f"""
-# Batch Processing Report
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-## Summary
-- **Total Files:** {stats['total_files']}
-- **Successfully Processed:** {stats['processed_files']}
-- **Failed:** {stats['failed_files']}
-- **Success Rate:** {(stats['processed_files'] / stats['total_files'] * 100):.1f}%
-- **Total Processing Time:** {stats['total_time']:.2f} seconds
-- **Average Time per File:** {(stats['total_time'] / stats['total_files']):.2f} seconds
-
-## Performance Metrics
-- **Fastest File:** {min(stats['file_times']):.2f} seconds
-- **Slowest File:** {max(stats['file_times']):.2f} seconds
-- **Total Output Size:** {sum(stats['output_sizes']):,} bytes
-- **Average Output Size:** {sum(stats['output_sizes']) / len(stats['output_sizes']):,} bytes
-
-## File Details
-"""
+        summary = results['summary']
+        report = []
+        report.append("BATCH PROCESSING REPORT")
+        report.append("=" * 50)
+        report.append(f"Total Files: {summary['total_files']}")
+        report.append(f"Processed Files: {summary['processed_files']}")
+        report.append(f"Failed Files: {summary['failed_files']}")
+        report.append(f"Success Rate: {(summary['processed_files'] / max(summary['total_files'], 1)) * 100:.1f}%")
+        report.append(f"Total Processing Time: {summary['total_time']:.2f} seconds")
         
-        for result in results['results']:
-            status = "✅ SUCCESS" if result['success'] else "❌ FAILED"
-            report += f"- **{result['file_name']}**: {status} ({result['processing_time']:.2f}s, {result['output_size']:,} bytes)\n"
-            if not result['success'] and result['error']:
-                report += f"  - Error: {result['error']}\n"
+        if summary['file_times']:
+            avg_time = sum(summary['file_times']) / len(summary['file_times'])
+            report.append(f"Average Time per File: {avg_time:.2f} seconds")
         
-        return report
+        if summary['output_sizes']:
+            total_output = sum(summary['output_sizes'])
+            avg_output = total_output / len(summary['output_sizes'])
+            report.append(f"Total Output Size: {total_output:,} bytes")
+            report.append(f"Average Output Size: {avg_output:,.0f} bytes")
+        
+        return "\n".join(report)
 
 class StreamlitBatchInterface:
     """Streamlit interface for batch processing"""
     
     def __init__(self):
         self.processor = None
-        self.progress_bar = None
-        self.status_text = None
+        self.results = []
     
     def show_batch_interface(self):
-        """Display the batch processing interface"""
-        st.markdown("## 🚀 High-Performance Batch Processing")
+        """Show the batch processing interface in Streamlit"""
+        st.markdown("### 📁 Batch Processing Interface")
         
         # Input directory selection
+        input_dir = st.text_input(
+            "Input Directory Path", 
+            value="INPUT_FILES",
+            help="Directory containing Excel files to process"
+        )
+        
+        # Output directory selection
+        output_dir = st.text_input(
+            "Output Directory Path",
+            value="OUTPUT_FILES",
+            help="Directory where processed files will be saved"
+        )
+        
+        # Processing options
         col1, col2 = st.columns(2)
         
         with col1:
-            input_dir = st.text_input(
-                "Input Directory",
-                value="input_files",
-                help="Directory containing Excel files to process"
-            )
-        
-        with col2:
-            output_dir = st.text_input(
-                "Output Directory", 
-                value="batch_output",
-                help="Directory to save processed files"
-            )
-        
-        # Processing options
-        st.markdown("### ⚙️ Processing Options")
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            processing_mode = st.selectbox(
-                "Processing Mode",
-                ["Sequential", "Parallel"],
-                help="Sequential: Process files one by one. Parallel: Process multiple files simultaneously."
-            )
-        
-        with col2:
-            max_workers = st.number_input(
-                "Max Workers (Parallel Mode)",
+            max_workers = st.slider(
+                "Max Concurrent Files",
                 min_value=1,
-                max_value=8,
-                value=4,
-                help="Number of parallel workers (only for parallel mode)"
+                max_value=10,
+                value=3,
+                help="Maximum number of files to process simultaneously"
             )
         
-        with col3:
-            validate_outputs = st.checkbox(
-                "Validate Output Quality",
+        with col2:
+            enable_preview = st.checkbox(
+                "Enable Preview",
                 value=True,
-                help="Check output file sizes and quality"
+                help="Show preview of processed files"
             )
         
         # Process button
         if st.button("🚀 Start Batch Processing", type="primary"):
-            self._run_batch_processing(
-                input_dir, 
-                output_dir, 
-                processing_mode, 
-                max_workers,
-                validate_outputs
-            )
+            if input_dir and output_dir:
+                self._process_batch(input_dir, output_dir, max_workers, enable_preview)
+            else:
+                st.error("Please specify both input and output directories")
     
-    def _run_batch_processing(self, input_dir: str, output_dir: str, mode: str, max_workers: int, validate: bool):
-        """Run the batch processing with progress tracking"""
-        
-        # Initialize processor
-        self.processor = HighPerformanceBatchProcessor(input_dir, output_dir)
-        
-        # Create progress tracking
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        def progress_callback(message: str):
-            status_text.text(message)
-        
-        # Process files
-        if mode == "Sequential":
-            results = self.processor.process_batch_sequential(progress_callback)
+    def _process_batch(self, input_dir: str, output_dir: str, max_workers: int, enable_preview: bool):
+        """Process batch of files"""
+        try:
+            with st.spinner("Initializing batch processor..."):
+                self.processor = HighPerformanceBatchProcessor(input_dir, output_dir)
+                self.processor.max_concurrent_files = max_workers
+            
+            # Discover files
+            with st.spinner("Discovering input files..."):
+                files = self.processor.discover_input_files()
+                
+                if not files:
+                    st.warning("No Excel files found in the input directory")
+                    return
+                
+                st.info(f"Found {len(files)} files to process")
+            
+            # Create progress bar
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Process files
+            results = []
+            for i, file_path in enumerate(files):
+                # Update progress
+                progress = (i + 1) / len(files)
+                progress_bar.progress(progress)
+                status_text.text(f"Processing {file_path.name}... ({i+1}/{len(files)})")
+                
+                # Process file
+                result = self.processor.process_single_file(file_path)
+                results.append(result)
+                
+                # Show preview if enabled
+                if enable_preview:
+                    self._show_file_preview(result)
+            
+            # Show results
+            self._show_batch_results(results)
+            
+        except Exception as e:
+            st.error(f"Batch processing failed: {str(e)}")
+            logger.error(f"Batch processing error: {str(e)}")
+    
+    def _show_file_preview(self, result: Dict[str, Any]):
+        """Show preview of processed file"""
+        if result['success']:
+            st.success(f"✅ {result['file_name']} processed successfully")
         else:
-            results = self.processor.process_batch_parallel(max_workers, progress_callback)
-        
-        # Update progress bar
-        progress_bar.progress(1.0)
-        
-        # Display results
-        self._display_results(results, validate)
+            st.error(f"❌ {result['file_name']} failed: {result['error']}")
     
-    def _display_results(self, results: Dict[str, Any], validate: bool):
-        """Display batch processing results"""
+    def _show_batch_results(self, results: List[Dict[str, Any]]):
+        """Show batch processing results"""
+        st.markdown("### 📊 Batch Processing Results")
         
-        if not results['success']:
-            st.error(f"❌ Batch processing failed: {results['message']}")
-            return
+        # Summary statistics
+        total_files = len(results)
+        successful = sum(1 for r in results if r['success'])
+        failed = total_files - successful
         
-        stats = results['stats']
-        
-        # Summary metrics
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("Total Files", stats['total_files'])
+            st.metric("Total Files", total_files)
         
         with col2:
-            st.metric("Success Rate", f"{(stats['processed_files'] / stats['total_files'] * 100):.1f}%")
+            st.metric("Successful", successful, f"+{successful}")
         
         with col3:
-            st.metric("Processing Time", f"{stats['total_time']:.2f}s")
-        
-        with col4:
-            avg_size = sum(stats['output_sizes']) / len(stats['output_sizes']) if stats['output_sizes'] else 0
-            st.metric("Avg Output Size", f"{avg_size:,.0f} bytes")
-        
-        # Quality validation
-        if validate:
-            self._validate_output_quality(results)
+            st.metric("Failed", failed, f"-{failed}" if failed > 0 else None)
         
         # Detailed results
-        with st.expander("📊 Detailed Results", expanded=True):
-            for result in results['results']:
-                if result['success']:
-                    st.success(f"✅ {result['file_name']}: {result['output_size']:,} bytes in {result['processing_time']:.2f}s")
-                else:
-                    st.error(f"❌ {result['file_name']}: {result['error']}")
-        
-        # Download report
-        report = self.processor.generate_batch_report(results)
-        
-        st.download_button(
-            label="📥 Download Processing Report",
-            data=report,
-            file_name=f"batch_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-            mime="text/markdown"
-        )
-    
-    def _validate_output_quality(self, results: Dict[str, Any]):
-        """Validate output file quality"""
-        st.markdown("### 🔍 Output Quality Validation")
-        
-        quality_issues = []
-        
-        for result in results['results']:
-            if result['success']:
-                # Check file size (should be > 10KB for proper PDFs)
-                if result['output_size'] < 10240:
-                    quality_issues.append(f"{result['file_name']}: Small output size ({result['output_size']} bytes)")
-                
-                # Check processing time (should be reasonable)
-                if result['processing_time'] > 30:
-                    quality_issues.append(f"{result['file_name']}: Slow processing ({result['processing_time']:.2f}s)")
-        
-        if quality_issues:
-            st.warning("⚠️ Quality Issues Detected:")
-            for issue in quality_issues:
-                st.text(f"• {issue}")
-        else:
-            st.success("✅ All outputs meet quality standards!")
-
-def main():
-    """Main function for command-line usage"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="High-Performance Batch Processor")
-    parser.add_argument("input_dir", help="Input directory containing Excel files")
-    parser.add_argument("-o", "--output", default="batch_output", help="Output directory")
-    parser.add_argument("-m", "--mode", choices=["sequential", "parallel"], default="parallel", help="Processing mode")
-    parser.add_argument("-w", "--workers", type=int, default=4, help="Number of parallel workers")
-    
-    args = parser.parse_args()
-    
-    processor = HighPerformanceBatchProcessor(args.input_dir, args.output)
-    
-    if args.mode == "sequential":
-        results = processor.process_batch_sequential()
-    else:
-        results = processor.process_batch_parallel(args.workers)
-    
-    # Print results
-    print(processor.generate_batch_report(results))
-
-if __name__ == "__main__":
-    main()
+        if results:
+            st.markdown("### 📋 Detailed Results")
+            
+            result_data = []
+            for result in results:
+                result_data.append({
+                    "File": result['file_name'],
+                    "Status": "✅ Success" if result['success'] else "❌ Failed",
+                    "Processing Time": f"{result['processing_time']:.2f}s",
+                    "Output Size": f"{result['output_size']:,} bytes" if result['output_size'] > 0 else "N/A",
+                    "Error": result['error'] if result['error'] else "None"
+                })
+            
+            results_df = pd.DataFrame(result_data)
+            st.dataframe(results_df, hide_index=True, use_container_width=True)

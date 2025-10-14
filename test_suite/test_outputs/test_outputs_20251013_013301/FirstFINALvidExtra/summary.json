@@ -1,0 +1,25 @@
+{
+  "file_name": "FirstFINALvidExtra.xlsx",
+  "processing_time": "2025-10-13T01:33:02.473385",
+  "documents_generated": 6,
+  "document_names": [
+    "First Page Summary",
+    "Deviation Statement",
+    "Final Bill Scrutiny Sheet",
+    "Extra Items Statement",
+    "Certificate II",
+    "Certificate III"
+  ],
+  "pdf_files_generated": 6,
+  "pdf_names": [
+    "First Page Summary.pdf",
+    "Deviation Statement.pdf",
+    "Final Bill Scrutiny Sheet.pdf",
+    "Extra Items Statement.pdf",
+    "Certificate II.pdf",
+    "Certificate III.pdf"
+  ],
+  "work_order_rows": 34,
+  "bill_quantity_rows": 34,
+  "extra_items_rows": 14
+}

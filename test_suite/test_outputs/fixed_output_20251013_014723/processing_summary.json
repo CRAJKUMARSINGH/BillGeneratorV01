@@ -1,0 +1,15 @@
+{
+  "input_file": "test_input_files/3rdFinalNoExtra.xlsx",
+  "processing_time": "2025-10-13T01:47:24.335963",
+  "html_documents_generated": 6,
+  "pdf_documents_generated": 6,
+  "document_names": [
+    "First Page Summary",
+    "Deviation Statement",
+    "Final Bill Scrutiny Sheet",
+    "Extra Items Statement",
+    "Certificate II",
+    "Certificate III"
+  ],
+  "output_directory": "fixed_output_20251013_014723"
+}
