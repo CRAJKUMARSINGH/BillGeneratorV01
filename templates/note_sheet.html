@@ -1,20 +1,24 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Note Sheet</title>
     <style>
+        @page { size: A4; margin: 15mm 10mm; }
         body { font-family: Arial, sans-serif; font-size: 10pt; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid black; padding: 5px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid black; padding: 5px; text-align: left; vertical-align: top; }
         th { background-color: #f2f2f2; font-weight: bold; }
         p { margin: 10px 0; }
+        /* Restored column widths: 10mm, 80mm, and 90mm */
+        th:nth-child(1), td:nth-child(1) { width: 10mm; }
+        th:nth-child(2), td:nth-child(2) { width: 80mm; }
+        th:nth-child(3), td:nth-child(3) { width: 90mm; }
     </style>
 </head>
 <body>
-    <h2>________ BILL SCRUTINY SHEET</h2>
-    <p>_______Running/ & Final Bill Agreement No.  {{ data.agreement_no | default("48/2024-25") }}</p>
+    <h2>FINAL BILL SCRUTINY SHEET</h2>
+    <p>First & Final Bill Agreement No. {{ data.agreement_no | default("48/2024-25") }}</p>
     <table>
         <tr><th>1</th><td>Chargeable Head</td><td>8443-00-108-00-00</td></tr>
         <tr><th>2</th><td>Agreement No.</td><td>{{ data.agreement_no | default("") }}</td></tr>

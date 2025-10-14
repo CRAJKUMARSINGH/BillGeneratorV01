@@ -29,7 +29,7 @@ from optimized_pdf_converter import OptimizedPDFConverter
 
 # Safe import for DataFrameSafetyUtils
 try:
-    from utils.dataframe_safety_utils import DataFrameSafetyUtils
+    from utils.dataframe_safety_utils import DataFrameSafetyUtils as UtilsDataFrameSafetyUtils
 except ImportError:
     # Fallback: Create minimal DataFrameSafetyUtils if not available
     class DataFrameSafetyUtils:
@@ -638,9 +638,16 @@ def show_excel_mode():
                     # Show data preview
                     show_data_preview(result)
 
-                    # Generate documents
-                    if st.button("🔄 Generate Documents", key="generate_excel"):
-                        generate_documents_excel_mode(result)
+                    # Create buttons for document generation
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if st.button("🔄 Generate PDF Documents", type="primary", key="generate_excel"):
+                            generate_documents_excel_mode(result)
+                    
+                    with col2:
+                        if st.button("🌐 Generate All Formats (HTML/PDF/DOC)", type="secondary", key="generate_all_excel"):
+                            generate_all_formats_documents(result)
 
 
         except Exception as e:
@@ -699,6 +706,7 @@ def show_data_preview(data: Dict):
                             key=f"title_{excel_key}"
                         )
                         modified_title_data[excel_key] = new_value
+
                     
                     field_count += 1
             
@@ -836,6 +844,96 @@ def generate_documents_excel_mode(data: Dict):
     except Exception as e:
         st.error(f"❌ Error generating documents: {str(e)}")
         logger.error(f"Document generation error: {traceback.format_exc()}")
+
+def generate_all_formats_documents(data: Dict):
+    """Generate all document formats (HTML, PDF, DOC) and provide download links"""
+    try:
+        with st.spinner("Generating all document formats..."):
+            # Use modified title data from session state if available
+            if hasattr(st.session_state, 'title_data') and st.session_state.title_data:
+                data['title_data'] = st.session_state.title_data
+                st.info("📝 Using your modified title information for document generation")
+            
+            # Initialize EnhancedDocumentGenerator
+            doc_generator = EnhancedDocumentGenerator(data)
+            
+            # Generate all formats
+            st.info("🔄 Generating HTML, PDF, and DOC documents...")
+            result = doc_generator.generate_all_formats_and_zip()
+            
+            if not result['success']:
+                st.error(f"❌ Failed to generate documents: {result['error']}")
+                return
+            
+            st.success("✅ All document formats generated successfully!")
+            
+            # Create temporary directory for files
+            temp_dir = Path(tempfile.mkdtemp())
+            
+            # Save and provide download links for HTML files
+            st.markdown("### 📄 HTML Documents")
+            html_files = []
+            for doc_name, html_content in result['html_documents'].items():
+                # Clean filename
+                clean_name = "".join(c for c in doc_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                clean_name = clean_name.replace(' ', '_')
+                filename = f"{clean_name}.html"
+                file_path = temp_dir / filename
+                
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                html_files.append(file_path)
+                
+                provide_download_link(str(file_path), filename, f"html_download_{len(html_files)}")
+            
+            # Save and provide download links for PDF files
+            st.markdown("### 🖨️ PDF Documents")
+            pdf_files = []
+            for doc_name, pdf_content in result['pdf_documents'].items():
+                filename = doc_name
+                file_path = temp_dir / filename
+                
+                with open(file_path, 'wb') as f:
+                    f.write(pdf_content)
+                pdf_files.append(file_path)
+                
+                provide_download_link(str(file_path), filename, f"pdf_download_{len(pdf_files)}")
+            
+            # Save and provide download links for DOC files
+            st.markdown("### 📝 DOC Documents")
+            doc_files = []
+            for doc_name, doc_content in result['doc_documents'].items():
+                filename = doc_name
+                file_path = temp_dir / filename
+                
+                with open(file_path, 'wb') as f:
+                    f.write(doc_content)
+                doc_files.append(file_path)
+                
+                provide_download_link(str(file_path), filename, f"doc_download_{len(doc_files)}")
+            
+            # Provide download link for merged PDF if available
+            if result['merged_pdf']:
+                merged_file = temp_dir / "Merged_Documents.pdf"
+                with open(merged_file, 'wb') as f:
+                    f.write(result['merged_pdf'])
+                st.markdown("### 📁 Merged Documents")
+                provide_download_link(str(merged_file), "Merged_Documents.pdf", "merged_download")
+            
+            # Provide download link for ZIP package
+            if result['zip_package']:
+                zip_file = temp_dir / "All_Documents.zip"
+                with open(zip_file, 'wb') as f:
+                    f.write(result['zip_package'])
+                st.markdown("### 📦 Complete Package")
+                st.info("📥 Download a ZIP file containing all formats (HTML, PDF, DOC) for all documents")
+                provide_download_link(str(zip_file), "All_Documents.zip", "zip_download")
+                
+            st.success("🎉 All documents are ready for download!")
+            
+    except Exception as e:
+        st.error(f"❌ Error generating all formats: {str(e)}")
+        logger.error(f"All formats generation error: {traceback.format_exc()}")
 
 def show_online_mode():
     """Handle online entry mode with step-by-step workflow"""
@@ -1598,8 +1696,132 @@ def show_document_generation():
     # Document generation
     st.markdown("### 🔄 Generate Documents")
 
-    if st.button("📄 Generate All Documents", type="primary"):
-        generate_documents_online_mode()
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("📄 Generate PDF Documents", type="primary", key="generate_pdf"):
+            generate_documents_online_mode()
+    
+    with col2:
+        if st.button("🌐 Generate All Formats (HTML/PDF/DOC)", type="secondary", key="generate_all"):
+            # Prepare data in the format expected by DocumentGenerator
+            processed_items = st.session_state.get('processed_bill_data', []) or []
+            bill_quantity_items = []
+            for it in processed_items:
+                item_no = it.get('item_no', '')
+                description = it.get('description', '')
+                unit = it.get('unit', '')
+                bill_qty = it.get('bill_qty', 0)
+                rate = it.get('rate', 0)
+                amount = it.get('amount', 0)
+                
+                bill_quantity_items.append({
+                    'Item No.': item_no,
+                    'Description': description,
+                    'Unit': unit,
+                    'Quantity': bill_qty,
+                    'Rate': rate,
+                    'Amount': amount
+                })
+            
+            # Convert list data to DataFrames as expected by DocumentGenerator
+            if isinstance(st.session_state.get('work_order_data'), pd.DataFrame):
+                work_order_df = st.session_state['work_order_data'].copy()
+            elif st.session_state.get('work_order_data') is not None:
+                work_order_df = pd.DataFrame(st.session_state['work_order_data'])
+            else:
+                work_order_df = pd.DataFrame()
+
+            bill_quantity_df = pd.DataFrame(bill_quantity_items) if bill_quantity_items else pd.DataFrame()
+
+            # CRITICAL: Reflect entered quantities into work_order_df so PDFs show correct amounts
+            try:
+                if not work_order_df.empty and len(bill_quantity_items) > 0:
+                    # Normalize key column names for matching
+                    wo_item_col = 'Item No.' if 'Item No.' in work_order_df.columns else ('Item' if 'Item' in work_order_df.columns else None)
+                    if wo_item_col is not None:
+                        # Build a quick lookup from bill items by item number
+                        bq_lookup = {}
+                        for bi in bill_quantity_items:
+                            key = bi.get('Item No.', bi.get('Item', ''))
+                            bq_lookup[str(key)] = bi
+                        # Update rows in work_order_df
+                        def _apply_billed(row):
+                            key = str(row.get(wo_item_col, ''))
+                            bi = bq_lookup.get(key)
+                            if bi:
+                                row['Quantity Since'] = bi.get('Quantity', 0)
+                                row['Quantity Upto'] = bi.get('Quantity', 0)
+                                # Prefer non-zero rate from bill item, else keep existing
+                                rate_val = bi.get('Rate', row.get('Rate', 0))
+                                row['Rate'] = rate_val
+                            return row
+                        work_order_df = work_order_df.apply(_apply_billed, axis=1)
+                    else:
+                        # If no item number column, best-effort alignment by index
+                        for idx, bi in enumerate(bill_quantity_items):
+                            if idx < len(work_order_df):
+                                work_order_df.at[idx, 'Quantity Since'] = bi.get('Quantity', 0)
+                                work_order_df.at[idx, 'Quantity Upto'] = bi.get('Quantity', 0)
+                                work_order_df.at[idx, 'Rate'] = bi.get('Rate', work_order_df.at[idx, 'Rate'] if 'Rate' in work_order_df.columns else 0)
+            except Exception:
+                # If alignment fails, continue with original DataFrame; bill quantities will still be used in other docs
+                pass
+            
+            # Normalize extra items columns
+            extra_items_list = st.session_state.get('extra_items', []) or []
+            extra_items_norm = []
+            for ex in extra_items_list:
+                item_no_value = ex.get('item_no')
+                if item_no_value is None:
+                    item_no_value = ex.get('Item No.', '')
+                item_no = item_no_value
+                
+                description_value = ex.get('description')
+                if description_value is None:
+                    description_value = ex.get('Description', '')
+                description = description_value
+                
+                unit_value = ex.get('unit')
+                if unit_value is None:
+                    unit_value = ex.get('Unit', '')
+                unit = unit_value
+                
+                quantity_value = ex.get('quantity')
+                if quantity_value is None:
+                    quantity_value = ex.get('Quantity', 0)
+                quantity = quantity_value
+                
+                rate_value = ex.get('rate')
+                if rate_value is None:
+                    rate_value = ex.get('Rate', 0)
+                rate = rate_value
+                
+                amount_value = ex.get('amount')
+                if amount_value is None:
+                    amount_value = ex.get('Amount', 0)
+                amount = amount_value
+                
+                extra_items_norm.append({
+                    'Item No.': item_no,
+                    'Description': description,
+                    'Unit': unit,
+                    'Quantity': quantity,
+                    'Rate': rate,
+                    'Amount': amount
+                })
+            extra_items_df = pd.DataFrame(extra_items_norm) if extra_items_norm else pd.DataFrame()
+
+            # Prepare data in DocumentGenerator format with proper DataFrames
+            online_data = {
+                'title_data': st.session_state.title_data,
+                'work_order_data': work_order_df,
+                'bill_quantity_data': bill_quantity_df,
+                'extra_items_data': extra_items_df
+            }
+            
+            # Generate all formats
+            generate_all_formats_documents(online_data)
 
     # Navigation
     col1, col2 = st.columns(2)

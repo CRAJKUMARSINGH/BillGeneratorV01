@@ -11,9 +11,9 @@
             font-size: 8pt;
         }
         .container {
-            margin: 14mm 14mm 10mm 14mm;
+            margin: 10mm 14mm 10mm 14mm;
             width: 182mm;
-            min-height: 287mm;
+            min-height: 277mm;
             box-sizing: border-box;
         }
         .header {
@@ -89,22 +89,22 @@
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 9.55mm;">S. No.</th>
+                        <th style="width: 63.83mm;">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
                         <th style="width: 10.06mm;">Unit</th>
                         <th style="width: 13.76mm;">Quantity executed (or supplied) since last certificate</th>
                         <th style="width: 13.76mm;">Quantity executed (or supplied) upto date as per MB</th>
-                        <th style="width: 9.55mm;">S. No.</th>
-                        <th style="width: 63.83mm;">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
                         <th style="width: 13.16mm;">Rate</th>
                         <th style="width: 19.53mm;">Upto date Amount</th>
                         <th style="width: 15.15mm;">Amount Since previous bill (Total for each sub-head)</th>
                         <th style="width: 11.96mm;">Remarks</th>
                     </tr>
                     <tr>
+                        <th>4</th>
+                        <th>5</th>
                         <th>1</th>
                         <th>2</th>
                         <th>3</th>
-                        <th>4</th>
-                        <th>5</th>
                         <th>6</th>
                         <th>7</th>
                         <th>8</th>
@@ -114,11 +114,11 @@
                 <tbody>
                     {% for item in data["items"] %}
                         <tr>
+                            <td style="width: 9.55mm;">{{ item.serial_no | default("") }}</td>
+                            <td class="description" style="width: 63.83mm;{% if item.bold %} font-weight: bold;{% endif %} {% if item.underline %} text-decoration: underline;{% endif %}">{{ item.description | default("") }}</td>
                             <td style="width: 10.06mm;">{{ item.unit | default("") }}</td>
                             <td style="width: 13.76mm;">{{ item.quantity_since_last | default("") }}</td>
                             <td style="width: 13.76mm;">{{ item.quantity_upto_date | default(item.quantity | default("") if item.unit|trim else "") }}</td>
-                            <td style="width: 9.55mm;">{{ item.serial_no | default("") }}</td>
-                            <td class="description" style="width: 63.83mm;{% if item.bold %} font-weight: bold;{% endif %} {% if item.underline %} text-decoration: underline;{% endif %}">{{ item.description | default("") }}</td>
                             <td style="width: 13.16mm;">{{ item.rate | default("") }}</td>
                             <td style="width: 19.53mm;">{{ item.amount | default("") }}</td>
                             <td style="width: 15.15mm;">{{ item.amount_previous | default("") }}</td>

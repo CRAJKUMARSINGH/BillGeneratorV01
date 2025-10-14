@@ -305,15 +305,18 @@ class DocumentGenerator:
             def render_with_xhtml2pdf(html_str: str) -> bytes:
                 # xhtml2pdf is more reliable but less feature-rich
                 # Clean HTML for better compatibility
-                clean_html = html_str
-                # Convert mm units to px for xhtml2pdf
                 import re
-                clean_html = re.sub(r'(\d+(?:\.\d+)?)mm', lambda m: f"{float(m.group(1)) * 3.78:.0f}px", clean_html)
-                # Remove problematic CSS properties but KEEP table-layout for width consistency
+                clean_html = html_str
+                
+                # Convert mm units to px for xhtml2pdf (1mm = 3.78px at 96 DPI)
+                clean_html = re.sub(r'(\d+(?:\.\d+)?)mm', lambda m: f"{float(m.group(1)) * 3.78:.2f}px", clean_html)
+                
+                # Remove problematic CSS properties but KEEP table-layout: fixed
                 clean_html = clean_html.replace('box-sizing: border-box;', '')
-                # Keep table-layout: fixed for width consistency - CRITICAL for table widths
-                # clean_html = clean_html.replace('table-layout: fixed;', '')
                 clean_html = clean_html.replace('break-inside: avoid;', '')
+                
+                # Ensure table-layout: fixed is preserved for column width consistency
+                # This is CRITICAL for maintaining specified column widths
                 
                 output = _io.BytesIO()
                 result = pisa.CreatePDF(
@@ -427,11 +430,7 @@ class DocumentGenerator:
             <style>
                 @page {{ 
                     size: A4; 
-                    margin: 10mm 10mm 10mm 10mm;
-                    margin-top: 10mm;
-                    margin-right: 10mm;
-                    margin-bottom: 10mm;
-                    margin-left: 10mm;
+                    margin: 10mm 10mm 11mm 10mm;
                 }}
                 * {{ box-sizing: border-box; }}
                 body {{ 
@@ -440,31 +439,27 @@ class DocumentGenerator:
                     padding: 10mm;
                     font-size: 10pt; 
                 }}
-                .page {{ 
-                    margin: 0;
-                    padding: 0;
-                }}
                 .page {{ }}
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
                 .subtitle {{ font-size: 11pt; margin: 3px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed !important; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word !important; overflow-wrap: break-word !important; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; overflow-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
                 
-                /* First Page Summary table widths - PROGRAMMATIC SPECS */
-                table.first-page-summary col.col-unit {{ width: 11.7mm; }}
-                table.first-page-summary col.col-qty-since {{ width: 16mm; }}
-                table.first-page-summary col.col-qty-upto {{ width: 16mm; }}
-                table.first-page-summary col.col-item-no {{ width: 11.1mm; }}
-                table.first-page-summary col.col-description {{ width: 74.2mm; }}
-                table.first-page-summary col.col-rate {{ width: 15.3mm; }}
-                table.first-page-summary col.col-amt-upto {{ width: 22.7mm; }}
-                table.first-page-summary col.col-amt-since {{ width: 17.6mm; }}
-                table.first-page-summary col.col-remark {{ width: 13.9mm; }}
+                /* First Page Summary table widths - ADJUSTED FOR PROPER FIT */
+                table.first-page-summary col.col-item-no {{ width: 9.55mm; }}
+                table.first-page-summary col.col-description {{ width: 63.83mm; }}
+                table.first-page-summary col.col-unit {{ width: 10.06mm; }}
+                table.first-page-summary col.col-qty-since {{ width: 13.76mm; }}
+                table.first-page-summary col.col-qty-upto {{ width: 13.76mm; }}
+                table.first-page-summary col.col-rate {{ width: 13.16mm; }}
+                table.first-page-summary col.col-amt-upto {{ width: 19.53mm; }}
+                table.first-page-summary col.col-amt-since {{ width: 15.15mm; }}
+                table.first-page-summary col.col-remark {{ width: 11.96mm; }}
             </style>
         </head>
         <body>
@@ -484,11 +479,11 @@ class DocumentGenerator:
             <h3>Work Items Summary</h3>
             <table class="first-page-summary">
                 <colgroup>
+                    <col class="col-item-no">
+                    <col class="col-description">
                     <col class="col-unit">
                     <col class="col-qty-since">
                     <col class="col-qty-upto">
-                    <col class="col-item-no">
-                    <col class="col-description">
                     <col class="col-rate">
                     <col class="col-amt-upto">
                     <col class="col-amt-since">
@@ -496,15 +491,15 @@ class DocumentGenerator:
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>Unit</th>
-                        <th>Quantity executed (or supplied) since last certificate</th>
-                        <th>Quantity executed (or supplied) upto date as per MB</th>
-                        <th>Item No.</th>
-                        <th>Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
-                        <th>Rate</th>
-                        <th>Amount upto date</th>
-                        <th>Amount Since previous bill (Total for each sub-head)</th>
-                        <th>Remark</th>
+                        <th style="width: 9.55mm;">S. No.</th>
+                        <th style="width: 63.83mm;">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+                        <th style="width: 10.06mm;">Unit</th>
+                        <th style="width: 13.76mm;">Quantity executed (or supplied) since last certificate</th>
+                        <th style="width: 13.76mm;">Quantity executed (or supplied) upto date as per MB</th>
+                        <th style="width: 13.16mm;">Rate</th>
+                        <th style="width: 19.53mm;">Upto date Amount</th>
+                        <th style="width: 15.15mm;">Amount Since previous bill (Total for each sub-head)</th>
+                        <th style="width: 11.96mm;">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -575,11 +570,7 @@ class DocumentGenerator:
             <style>
                 @page {{ 
                     size: A4 landscape; 
-                    margin: 10mm 10mm 10mm 10mm;
-                    margin-top: 10mm;
-                    margin-right: 10mm;
-                    margin-bottom: 10mm;
-                    margin-left: 10mm;
+                    margin: 10mm 10mm 11mm 10mm;
                 }}
                 * {{ box-sizing: border-box; }}
                 body {{ 
@@ -592,27 +583,27 @@ class DocumentGenerator:
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 14pt; font-weight: bold; }}
                 .subtitle {{ font-size: 10pt; margin: 3px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 4px 0; table-layout: fixed !important; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 4px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word !important; overflow-wrap: break-word !important; font-size: 8.5pt; }}
+                th, td {{ border: 1px solid #000; padding: 3px; text-align: left; word-wrap: break-word; overflow-wrap: break-word; font-size: 8.5pt; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
                 
-                /* Deviation Statement table widths - TESTED SPECS */
+                /* Deviation Statement table widths - UPDATED TO SPECIFIED VALUES */
                 table.deviation-statement col.col-item-no {{ width: 6mm; }}
-                table.deviation-statement col.col-description {{ width: 95mm; }}
-                table.deviation-statement col.col-unit {{ width: 10mm; }}
-                table.deviation-statement col.col-qty-wo {{ width: 10mm; }}
-                table.deviation-statement col.col-rate {{ width: 12mm; }}
-                table.deviation-statement col.col-amt-wo {{ width: 12mm; }}
-                table.deviation-statement col.col-qty-executed {{ width: 12mm; }}
-                table.deviation-statement col.col-amt-executed {{ width: 12mm; }}
-                table.deviation-statement col.col-excess-qty {{ width: 12mm; }}
-                table.deviation-statement col.col-excess-amt {{ width: 12mm; }}
-                table.deviation-statement col.col-saving-qty {{ width: 12mm; }}
-                table.deviation-statement col.col-saving-amt {{ width: 12mm; }}
-                table.deviation-statement col.col-remarks {{ width: 40mm; }}
+                table.deviation-statement col.col-description {{ width: 118mm; }}
+                table.deviation-statement col.col-unit {{ width: 10.5mm; }}
+                table.deviation-statement col.col-qty-wo {{ width: 10.5mm; }}
+                table.deviation-statement col.col-rate {{ width: 10.5mm; }}
+                table.deviation-statement col.col-amt-wo {{ width: 10.5mm; }}
+                table.deviation-statement col.col-qty-executed {{ width: 10.5mm; }}
+                table.deviation-statement col.col-amt-executed {{ width: 10.5mm; }}
+                table.deviation-statement col.col-excess-qty {{ width: 10.5mm; }}
+                table.deviation-statement col.col-excess-amt {{ width: 10.5mm; }}
+                table.deviation-statement col.col-saving-qty {{ width: 10.5mm; }}
+                table.deviation-statement col.col-saving-amt {{ width: 10.5mm; }}
+                table.deviation-statement col.col-remarks {{ width: 48mm; }}
             </style>
         </head>
         <body>
@@ -640,19 +631,19 @@ class DocumentGenerator:
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>ITEM No.</th>
-                        <th>Description</th>
-                        <th>Unit</th>
-                        <th>Qty as per Work Order</th>
-                        <th>Rate</th>
-                        <th>Amt as per Work Order Rs.</th>
-                        <th>Qty Executed</th>
-                        <th>Amt as per Executed Rs.</th>
-                        <th>Excess Qty</th>
-                        <th>Excess Amt Rs.</th>
-                        <th>Saving Qty</th>
-                        <th>Saving Amt Rs.</th>
-                        <th>REMARKS/ REASON.</th>
+                        <th style="width: 6mm;">ITEM No.</th>
+                        <th style="width: 118mm;">Description</th>
+                        <th style="width: 10.5mm;">Unit</th>
+                        <th style="width: 10.5mm;">Qty as per Work Order</th>
+                        <th style="width: 10.5mm;">Rate</th>
+                        <th style="width: 10.5mm;">Amt as per Work Order Rs.</th>
+                        <th style="width: 10.5mm;">Qty Executed</th>
+                        <th style="width: 10.5mm;">Amt as per Executed Rs.</th>
+                        <th style="width: 10.5mm;">Excess Qty</th>
+                        <th style="width: 10.5mm;">Excess Amt Rs.</th>
+                        <th style="width: 10.5mm;">Saving Qty</th>
+                        <th style="width: 10.5mm;">Saving Amt Rs.</th>
+                        <th style="width: 48mm;">REMARKS/ REASON.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -834,11 +825,7 @@ class DocumentGenerator:
             <style>
                 @page {{ 
                     size: A4; 
-                    margin: 10mm 10mm 10mm 10mm;
-                    margin-top: 10mm;
-                    margin-right: 10mm;
-                    margin-bottom: 10mm;
-                    margin-left: 10mm;
+                    margin: 10mm 10mm 11mm 10mm;
                 }}
                 * {{ box-sizing: border-box; }}
                 body {{ 
@@ -851,20 +838,20 @@ class DocumentGenerator:
                 .header {{ text-align: center; margin-bottom: 8px; }}
                 .title {{ font-size: 16pt; font-weight: bold; }}
                 .subtitle {{ font-size: 11pt; margin: 3px 0; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed !important; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }}
                 thead {{ display: table-header-group; }}
                 tr, img {{ break-inside: avoid; }}
-                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word !important; overflow-wrap: break-word !important; }}
+                th, td {{ border: 1px solid #000; padding: 4px; text-align: left; word-wrap: break-word; overflow-wrap: break-word; }}
                 th {{ background-color: #f0f0f0; font-weight: bold; }}
                 .amount {{ text-align: right; }}
                 
-                /* Extra Items Statement table widths - VALIDATED SPECS */
-                table.extra-items col.col-unit {{ width: 11.7mm; }}
-                table.extra-items col.col-quantity {{ width: 16mm; }}
-                table.extra-items col.col-item-no {{ width: 11.1mm; }}
-                table.extra-items col.col-description {{ width: 74.2mm; }}
-                table.extra-items col.col-rate {{ width: 15.3mm; }}
-                table.extra-items col.col-amount {{ width: 22.7mm; }}
+                /* Extra Items Statement table widths - ADJUSTED FOR PROPER FIT */
+                table.extra-items col.col-item-no {{ width: 9.55mm; }}
+                table.extra-items col.col-description {{ width: 63.83mm; }}
+                table.extra-items col.col-unit {{ width: 10.06mm; }}
+                table.extra-items col.col-quantity {{ width: 13.76mm; }}
+                table.extra-items col.col-rate {{ width: 13.16mm; }}
+                table.extra-items col.col-amount {{ width: 19.53mm; }}
             </style>
         </head>
         <body>
@@ -889,12 +876,12 @@ class DocumentGenerator:
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>Item No.</th>
-                        <th>Description</th>
-                        <th>Unit</th>
-                        <th>Quantity</th>
-                        <th>Rate</th>
-                        <th>Amount</th>
+                        <th style="width: 9.55mm;">Item No.</th>
+                        <th style="width: 63.83mm;">Description</th>
+                        <th style="width: 10.06mm;">Unit</th>
+                        <th style="width: 13.76mm;">Quantity</th>
+                        <th style="width: 13.16mm;">Rate</th>
+                        <th style="width: 19.53mm;">Amount</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -543,3 +543,23 @@ class StreamlitBatchInterface:
             
             results_df = pd.DataFrame(result_data)
             st.dataframe(results_df, hide_index=True, use_container_width=True)
+
+
+def process_batch(input_directory: str = "INPUT_FILES", output_directory: str = "OUTPUT_FILES"):
+    """
+    Process a batch of Excel files for profiling purposes.
+    
+    Args:
+        input_directory (str): Directory containing Excel files to process
+        output_directory (str): Directory where processed files will be saved
+    """
+    processor = HighPerformanceBatchProcessor(input_directory, output_directory)
+    results = processor.process_batch_files()
+    return results
+
+if __name__ == "__main__":
+    # Allow command line arguments for input and output directories
+    import sys
+    input_dir = sys.argv[1] if len(sys.argv) > 1 else "INPUT_FILES"
+    output_dir = sys.argv[2] if len(sys.argv) > 2 else "OUTPUT_FILES"
+    process_batch(input_dir, output_dir)

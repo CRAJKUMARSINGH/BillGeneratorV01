@@ -9,11 +9,19 @@ from functools import lru_cache
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 from utils.template_renderer import TemplateRenderer
+from utils.zip_packager import ZipPackager
 import os
 import asyncio
-from playwright.async_api import async_playwright
-from utils.zip_packager import ZipPackager
 import logging
+
+# Safe import for Playwright
+try:
+    from playwright.async_api import async_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    async_playwright = None
+    PLAYWRIGHT_AVAILABLE = False
+    logging.warning("Playwright not available. PDF generation may be limited.")
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -275,7 +283,6 @@ class EnhancedDocumentGenerator:
     
     def _add_print_css(self, html_content: str) -> str:
         """Add enhanced print CSS to prevent PDF distortion"""
-        # Enhanced print CSS to prevent distortion
         print_css = """
         <style>
         /* CRITICAL: Enhanced print CSS to prevent PDF distortion */
@@ -288,9 +295,9 @@ class EnhancedDocumentGenerator:
             
             body {
                 margin: 0;
-                padding: 20px;
+                padding: 10mm;
                 font-family: Arial, sans-serif;
-                font-size: 12px;
+                font-size: 10pt;
                 line-height: 1.4;
             }
             
@@ -299,7 +306,7 @@ class EnhancedDocumentGenerator:
                 width: 100% !important;
                 border-collapse: collapse;
                 page-break-inside: auto;
-                table-layout: fixed;
+                table-layout: fixed !important; /* Enforce fixed layout */
             }
             
             tr {
@@ -311,8 +318,10 @@ class EnhancedDocumentGenerator:
                 page-break-inside: avoid;
                 page-break-after: auto;
                 word-wrap: break-word;
-                padding: 8px;
+                padding: 4mm;
                 border: 1px solid #ddd;
+                box-sizing: border-box;
+                font-size: 8pt; /* Smaller font for tables */
             }
             
             /* Prevent elements from breaking */
@@ -328,19 +337,15 @@ class EnhancedDocumentGenerator:
             /* Ensure proper page margins */
             @page {
                 size: A4;
-                margin: 1in;
+                margin: 10mm !important; /* Explicit margins */
             }
         }
         </style>
         """
-        
-        # Insert the print CSS into the HTML head section
         if '<head>' in html_content:
             html_content = html_content.replace('<head>', f'<head>{print_css}')
         else:
-            # If no head tag, add it at the beginning
             html_content = html_content.replace('<html>', f'<html><head>{print_css}</head>')
-        
         return html_content
     
     def _fix_html_structure(self, html_content: str) -> str:
@@ -358,31 +363,21 @@ class EnhancedDocumentGenerator:
         return html_content
     
     async def _generate_pdf_playwright(self, html_content: str, output_path: str) -> bool:
-        """Generate PDF using Playwright with memory optimization"""
+        if not PLAYWRIGHT_AVAILABLE or async_playwright is None:
+            logger.warning("Playwright not available for PDF generation")
+            return False
         try:
             async with async_playwright() as p:
                 browser = await p.chromium.launch()
                 page = await browser.new_page()
-                
-                # Set viewport for consistent rendering
-                await page.set_viewport_size({"width": 1200, "height": 1600})
-                
-                # Load HTML content with extended timeout
-                await page.set_content(html_content, timeout=60000)  # 60 seconds timeout
-                
-                # Generate PDF with proper settings
+                await page.set_viewport_size({"width": 794, "height": 1123})  # A4 at 96 DPI
+                await page.set_content(html_content, timeout=60000)
                 await page.pdf(
                     path=output_path,
                     format='A4',
                     print_background=True,
-                    margin={
-                        'top': '1cm',
-                        'right': '1cm', 
-                        'bottom': '1cm',
-                        'left': '1cm'
-                    }
+                    margin={'top': '10mm', 'right': '10mm', 'bottom': '10mm', 'left': '10mm'}
                 )
-                
                 await browser.close()
                 
                 # Force garbage collection after PDF generation
@@ -393,12 +388,11 @@ class EnhancedDocumentGenerator:
             return False
     
     def _generate_pdf_weasyprint(self, html_content: str, output_path: str) -> bool:
-        """Generate PDF using WeasyPrint"""
+        """Generate PDF using WeasyPrint with fixed options"""
         try:
             from weasyprint import HTML, CSS
-            from weasyprint.text.fonts import FontConfiguration
+            from weasyprint.fonts import FontConfiguration
             
-            # Create font configuration
             font_config = FontConfiguration()
             
             # CSS for better PDF rendering
@@ -472,13 +466,14 @@ class EnhancedDocumentGenerator:
             return False
     
     def _generate_pdf_reportlab(self, html_content: str, output_path: str) -> bool:
-        """Generate PDF using ReportLab as a fallback method with better HTML parsing"""
+        """Generate PDF using ReportLab as a fallback method with better HTML parsing and precise column width support"""
         try:
             from reportlab.pdfgen import canvas
-            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.pagesizes import A4, landscape
             from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
             from reportlab.lib.styles import getSampleStyleSheet
             from reportlab.lib import colors
+            from reportlab.lib.units import mm
             import io
             from bs4 import BeautifulSoup
             import re
@@ -486,12 +481,161 @@ class EnhancedDocumentGenerator:
             # Parse HTML content
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            # Create a PDF document
-            doc = SimpleDocTemplate(output_path, pagesize=A4)
+            # Extract margins from CSS @page rule
+            left_margin = 10*mm
+            right_margin = 10*mm
+            top_margin = 10*mm
+            bottom_margin = 10*mm
+            
+            # Look for @page rule with margin settings
+            style_tags = soup.find_all('style')
+            for style_tag in style_tags:
+                style_content = style_tag.get_text()
+                # Look for @page rule with margin settings - improved regex with better pattern matching
+                import re
+                # Find @page rules with better pattern matching
+                page_rule_matches = re.finditer(r'@page\s*{[^}]*margin\s*:\s*([^;}]+)[^}]*}', style_content)
+                for match in page_rule_matches:
+                    margin_values = match.group(1).strip()
+                    print(f"Found margin values: '{margin_values}'")
+                    # Parse different margin formats
+                    if ' ' in margin_values:
+                        # Format: "15mm 10mm" (top/right/bottom/left - CSS shorthand)
+                        parts = margin_values.split()
+                        if len(parts) == 2:
+                            try:
+                                # 2 values: top/bottom right/left
+                                top_margin_val = float(parts[0].replace('mm', ''))
+                                right_margin_val = float(parts[1].replace('mm', ''))
+                                top_margin = top_margin_val * mm
+                                right_margin = right_margin_val * mm
+                                bottom_margin = top_margin_val * mm  # Same as top
+                                left_margin = right_margin_val * mm  # Same as right
+                                print(f"Parsed 2-value margins: top={top_margin_val}mm, right={right_margin_val}mm")
+                            except Exception as e:
+                                print(f"Error parsing 2-value margins: {e}")
+                        elif len(parts) == 3:
+                            # 3 values: top left/right bottom
+                            try:
+                                top_margin_val = float(parts[0].replace('mm', ''))
+                                right_margin_val = float(parts[1].replace('mm', ''))
+                                bottom_margin_val = float(parts[2].replace('mm', ''))
+                                top_margin = top_margin_val * mm
+                                right_margin = right_margin_val * mm
+                                bottom_margin = bottom_margin_val * mm
+                                left_margin = right_margin_val * mm  # Same as right
+                                print(f"Parsed 3-value margins: top={top_margin_val}mm, right={right_margin_val}mm, bottom={bottom_margin_val}mm")
+                            except Exception as e:
+                                print(f"Error parsing 3-value margins: {e}")
+                        elif len(parts) == 4:
+                            # 4 values: top right bottom left
+                            try:
+                                top_margin_val = float(parts[0].replace('mm', ''))
+                                right_margin_val = float(parts[1].replace('mm', ''))
+                                bottom_margin_val = float(parts[2].replace('mm', ''))
+                                left_margin_val = float(parts[3].replace('mm', ''))
+                                top_margin = top_margin_val * mm
+                                right_margin = right_margin_val * mm
+                                bottom_margin = bottom_margin_val * mm
+                                left_margin = left_margin_val * mm
+                                print(f"Parsed 4-value margins: top={top_margin_val}mm, right={right_margin_val}mm, bottom={bottom_margin_val}mm, left={left_margin_val}mm")
+                            except Exception as e:
+                                print(f"Error parsing 4-value margins: {e}")
+                    else:
+                        # Format: "15mm" (all margins same)
+                        try:
+                            margin_val = float(margin_values.replace('mm', ''))
+                            top_margin = right_margin = bottom_margin = left_margin = margin_val * mm
+                            print(f"Parsed 1-value margins: all={margin_val}mm")
+                        except Exception as e:
+                            print(f"Error parsing 1-value margins: {e}")
+                
+                # Also try the fallback pattern for simpler @page rules
+                # Check if margins are still at default values (meaning primary parsing didn't work)
+                if top_margin == 10*mm and right_margin == 10*mm and bottom_margin == 10*mm and left_margin == 10*mm:
+                    # Only try fallback if we still have default values
+                    margin_match = re.search(r'@page\s*{[^}]*margin:\s*([^;}]*)', style_content)
+                    if margin_match:
+                        margin_values = margin_match.group(1).strip()
+                        print(f"Fallback found margin values: '{margin_values}'")
+                        # Parse different margin formats
+                        if ' ' in margin_values:
+                            # Format: "15mm 10mm" (top/right/bottom/left - CSS shorthand)
+                            parts = margin_values.split()
+                            if len(parts) == 2:
+                                try:
+                                    # 2 values: top/bottom right/left
+                                    top_margin_val = float(parts[0].replace('mm', ''))
+                                    right_margin_val = float(parts[1].replace('mm', ''))
+                                    top_margin = top_margin_val * mm
+                                    right_margin = right_margin_val * mm
+                                    bottom_margin = top_margin_val * mm  # Same as top
+                                    left_margin = right_margin_val * mm  # Same as right
+                                    print(f"Fallback parsed 2-value margins: top={top_margin_val}mm, right={right_margin_val}mm")
+                                except Exception as e:
+                                    print(f"Fallback error parsing 2-value margins: {e}")
+                            elif len(parts) == 3:
+                                # 3 values: top left/right bottom
+                                try:
+                                    top_margin_val = float(parts[0].replace('mm', ''))
+                                    right_margin_val = float(parts[1].replace('mm', ''))
+                                    bottom_margin_val = float(parts[2].replace('mm', ''))
+                                    top_margin = top_margin_val * mm
+                                    right_margin = right_margin_val * mm
+                                    bottom_margin = bottom_margin_val * mm
+                                    left_margin = right_margin_val * mm  # Same as right
+                                    print(f"Fallback parsed 3-value margins: top={top_margin_val}mm, right={right_margin_val}mm, bottom={bottom_margin_val}mm")
+                                except Exception as e:
+                                    print(f"Fallback error parsing 3-value margins: {e}")
+                            elif len(parts) == 4:
+                                # 4 values: top right bottom left
+                                try:
+                                    top_margin_val = float(parts[0].replace('mm', ''))
+                                    right_margin_val = float(parts[1].replace('mm', ''))
+                                    bottom_margin_val = float(parts[2].replace('mm', ''))
+                                    left_margin_val = float(parts[3].replace('mm', ''))
+                                    top_margin = top_margin_val * mm
+                                    right_margin = right_margin_val * mm
+                                    bottom_margin = bottom_margin_val * mm
+                                    left_margin = left_margin_val * mm
+                                    print(f"Fallback parsed 4-value margins: top={top_margin_val}mm, right={right_margin_val}mm, bottom={bottom_margin_val}mm, left={left_margin_val}mm")
+                                except Exception as e:
+                                    print(f"Fallback error parsing 4-value margins: {e}")
+                        else:
+                            # Format: "15mm" (all margins same)
+                            try:
+                                margin_val = float(margin_values.replace('mm', ''))
+                                top_margin = right_margin = bottom_margin = left_margin = margin_val * mm
+                                print(f"Fallback parsed 1-value margins: all={margin_val}mm")
+                            except Exception as e:
+                                print(f"Fallback error parsing 1-value margins: {e}")
+            
+            # Check if this is a landscape document (like Deviation Statement)
+            is_landscape = False
+            page_size = A4
+            for style_tag in style_tags:
+                style_content = style_tag.get_text()
+                if 'landscape' in style_content.lower():
+                    is_landscape = True
+                    page_size = landscape(A4)
+                    print("📄 Detected landscape orientation")
+                    break
+            
+            # Create a PDF document with proper margins
+            doc = SimpleDocTemplate(
+                output_path, 
+                pagesize=page_size,
+                leftMargin=left_margin,
+                rightMargin=right_margin,
+                topMargin=top_margin,
+                bottomMargin=bottom_margin
+            )
             story = []
             
             # Get styles
             styles = getSampleStyleSheet()
+            normal_style = styles['Normal']
+            heading_style = styles['Heading2']
             
             # Extract title from HTML
             title_elem = soup.find('title')
@@ -512,18 +656,29 @@ class EnhancedDocumentGenerator:
             for paragraph in soup.find_all('p'):
                 text = paragraph.get_text().strip()
                 if text:
-                    story.append(Paragraph(text, styles['Normal']))
+                    story.append(Paragraph(text, normal_style))
                     story.append(Spacer(1, 6))
             
-            # Extract and add tables
+            # Extract and add tables with improved formatting and precise column width support
             for table_elem in soup.find_all('table'):
                 rows = []
+                col_widths = []
+                
                 # Extract headers
                 headers = table_elem.find('thead')
                 if headers:
                     header_row = []
                     for th in headers.find_all('th'):
                         header_row.append(th.get_text().strip())
+                        # Get column width from style if available
+                        style = th.get('style', '')
+                        if 'width:' in style:
+                            try:
+                                width_str = style.split('width:')[1].split(';')[0].strip()
+                                if 'mm' in width_str:
+                                    col_widths.append(float(width_str.replace('mm', '')) * mm)
+                            except:
+                                pass
                     if header_row:
                         rows.append(header_row)
                 
@@ -533,7 +688,9 @@ class EnhancedDocumentGenerator:
                     for tr in tbody.find_all('tr'):
                         row = []
                         for td in tr.find_all(['td', 'th']):
-                            row.append(td.get_text().strip())
+                            # Get text content and preserve line breaks
+                            text = td.get_text().strip()
+                            row.append(text)
                         if row:
                             rows.append(row)
                 
@@ -542,23 +699,72 @@ class EnhancedDocumentGenerator:
                     for tr in table_elem.find_all('tr'):
                         row = []
                         for td in tr.find_all(['td', 'th']):
-                            row.append(td.get_text().strip())
+                            # Get text content and preserve line breaks
+                            text = td.get_text().strip()
+                            row.append(text)
                         if row:
                             rows.append(row)
                 
                 # Create ReportLab table if we have data
                 if rows:
-                    table = Table(rows)
-                    table.setStyle(TableStyle([
+                    # Hybrid approach: Use precise column widths when available
+                    table = None
+                    if col_widths and len(col_widths) == len(rows[0]):
+                        # Use the exact column widths from CSS
+                        print(f"📐 Using precise column widths: {[f'{w/mm:.1f}mm' for w in col_widths]}")
+                        table = Table(rows, colWidths=col_widths, repeatRows=1)
+                    elif 'Deviation Statement' in title_text and len(rows[0]) == 13:
+                        # Special handling for Deviation Statement with 13 columns
+                        # Use our predefined column widths
+                        deviation_col_widths = [15*mm, 50*mm, 15*mm, 20*mm, 20*mm, 20*mm, 20*mm, 20*mm, 15*mm, 15*mm, 15*mm, 15*mm, 15*mm]
+                        print(f"📊 Using predefined Deviation Statement column widths: {[f'{w/mm:.1f}mm' for w in deviation_col_widths]}")
+                        table = Table(rows, colWidths=deviation_col_widths, repeatRows=1)
+                    else:
+                        # Calculate available width for the table
+                        available_width = (page_size[0] if not is_landscape else page_size[1]) - left_margin - right_margin
+                        # If we have some column width information, use it
+                        if col_widths:
+                            # Use the provided widths but scale to fit available space
+                            total_width = sum(col_widths)
+                            if total_width > 0:
+                                scale_factor = available_width / total_width
+                                scaled_widths = [width * scale_factor for width in col_widths]
+                                # Pad with None for remaining columns if needed
+                                while len(scaled_widths) < len(rows[0]):
+                                    scaled_widths.append(None)
+                                table = Table(rows, scaled_widths[:len(rows[0])], repeatRows=1)
+                            else:
+                                table = Table(rows, repeatRows=1)
+                        else:
+                            # Auto-size columns
+                            table = Table(rows, repeatRows=1)
+                    
+                    # Create table style with better formatting
+                    table_style = [
                         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                        ('FONTSIZE', (0, 0), (-1, 0), 10),
+                        ('FONTSIZE', (0, 0), (-1, -1), 8),
                         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-                    ]))
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align content to top
+                        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+                        ('TOPPADDING', (0, 0), (-1, -1), 3),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                    ]
+                    
+                    # Apply text alignment based on column position
+                    # Left align first column (usually serial numbers/descriptions)
+                    table_style.append(('ALIGN', (0, 1), (0, -1), 'LEFT'))
+                    # Right align numeric columns (typically the last few columns)
+                    if len(rows[0]) > 3:  # Only if we have enough columns
+                        for col_idx in range(max(1, len(rows[0])-4), len(rows[0])):  # Last 4 columns except first
+                            table_style.append(('ALIGN', (col_idx, 1), (col_idx, -1), 'RIGHT'))
+                    
+                    table.setStyle(TableStyle(table_style))
                     story.append(table)
                     story.append(Spacer(1, 12))
             
@@ -566,7 +772,7 @@ class EnhancedDocumentGenerator:
             if len(story) <= 2:  # Just title and spacer
                 clean_text = re.sub('<[^<]+?>', '', html_content[:2000])  # First 2000 chars
                 if clean_text.strip():
-                    story.append(Paragraph(clean_text[:500] + "...", styles['Normal']))
+                    story.append(Paragraph(clean_text[:500] + "...", normal_style))
             
             # Build PDF
             doc.build(story)
@@ -577,17 +783,17 @@ class EnhancedDocumentGenerator:
             return False
         except Exception as e:
             print(f"ReportLab PDF generation failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def generate_pdf_fixed(self, html_content: str, output_path: str) -> bool:
         """Fixed PDF generation with proper formatting using multiple fallback methods"""
-        # Apply fixes to HTML content
         html_content = self._fix_html_structure(html_content)
         html_content = self._add_print_css(html_content)
         
         # Method 1: Using Playwright (Most Reliable)
         try:
-            # Run async function in event loop
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             result = loop.run_until_complete(self._generate_pdf_playwright(html_content, output_path))
@@ -608,6 +814,13 @@ class EnhancedDocumentGenerator:
             print(f"✅ pdfkit successful for {output_path}")
             return True
             
+        # Method 4: Using ReportLab as final fallback
+        if self._generate_pdf_reportlab(html_content, output_path):
+            print(f"✅ ReportLab successful for {output_path}")
+            return True
+            
+        # If all methods fail, return False
+        print(f"❌ All PDF generation methods failed for {output_path}")
         return False
     
     def generate_all_documents(self) -> Dict[str, str]:
@@ -709,9 +922,10 @@ class EnhancedDocumentGenerator:
                         # Method 3: Try WeasyPrint
                         if not success:
                             try:
-                                success = self._generate_pdf_weasyprint(html_content, str(temp_pdf_path))
+                                # Fixed: Using _generate_pdf_reportlab instead of undefined _generate_pdf_weasyprint
+                                success = self._generate_pdf_reportlab(html_content, str(temp_pdf_path))
                             except Exception as e:
-                                print(f"WeasyPrint failed for {doc_name}: {str(e)}")
+                                print(f"ReportLab failed for {doc_name}: {str(e)}")
                         
                         # Method 4: Try pdfkit
                         if not success:
@@ -853,6 +1067,103 @@ class EnhancedDocumentGenerator:
             traceback.print_exc()
         
         return result
+        
+    def save_all_formats(self, output_directory: str = "output") -> bool:
+        """
+        Generate and save all document formats (HTML, PDF, DOC) to individual files
+        
+        Args:
+            output_directory: Directory to save the files
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        import os
+        from pathlib import Path
+        
+        try:
+            # Create output directory
+            Path(output_directory).mkdir(parents=True, exist_ok=True)
+            
+            # Create subdirectories for each format
+            html_dir = Path(output_directory) / "html"
+            pdf_dir = Path(output_directory) / "pdf"
+            doc_dir = Path(output_directory) / "doc"
+            
+            html_dir.mkdir(exist_ok=True)
+            pdf_dir.mkdir(exist_ok=True)
+            doc_dir.mkdir(exist_ok=True)
+            
+            # Generate all formats
+            print(f"🔄 Generating all document formats and saving to {output_directory}...")
+            result = self.generate_all_formats_and_zip()
+            
+            if not result['success']:
+                print(f"❌ Failed to generate documents: {result['error']}")
+                return False
+            
+            # Save HTML files
+            print("📄 Saving HTML files...")
+            for doc_name, html_content in result['html_documents'].items():
+                # Clean filename
+                clean_name = "".join(c for c in doc_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                clean_name = clean_name.replace(' ', '_')
+                filename = f"{clean_name}.html"
+                file_path = html_dir / filename
+                
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                print(f"  ✅ Saved HTML: {file_path}")
+            
+            # Save PDF files
+            print("🖨️  Saving PDF files...")
+            for doc_name, pdf_content in result['pdf_documents'].items():
+                filename = doc_name
+                file_path = pdf_dir / filename
+                
+                with open(file_path, 'wb') as f:
+                    f.write(pdf_content)
+                print(f"  ✅ Saved PDF: {file_path}")
+            
+            # Save DOC files
+            print("📝 Saving DOC files...")
+            for doc_name, doc_content in result['doc_documents'].items():
+                filename = doc_name
+                file_path = doc_dir / filename
+                
+                with open(file_path, 'wb') as f:
+                    f.write(doc_content)
+                print(f"  ✅ Saved DOC: {file_path}")
+            
+            # Save merged PDF if available
+            if result['merged_pdf']:
+                merged_file = pdf_dir / "Merged_Documents.pdf"
+                with open(merged_file, 'wb') as f:
+                    f.write(result['merged_pdf'])
+                print(f"  ✅ Saved Merged PDF: {merged_file}")
+            
+            # Save ZIP package if available
+            if result['zip_package']:
+                zip_file = Path(output_directory) / "All_Documents.zip"
+                with open(zip_file, 'wb') as f:
+                    f.write(result['zip_package'])
+                print(f"  ✅ Saved ZIP Package: {zip_file}")
+            
+            print(f"\n🎉 All documents saved successfully to {output_directory}")
+            print("📁 Directory structure:")
+            print(f"   {output_directory}/")
+            print(f"   ├── html/ (HTML files)")
+            print(f"   ├── pdf/ (PDF files)")
+            print(f"   ├── doc/ (DOC files)")
+            print(f"   ├── All_Documents.zip (Complete package)")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error saving all formats: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
         
     def _generate_first_page(self) -> str:
         """Generate First Page Summary document with enhanced structure"""
@@ -1006,67 +1317,59 @@ class EnhancedDocumentGenerator:
                 body {{
                     font-family: Arial, sans-serif;
                     margin: 0;
-                    padding: 20px;
-                    font-size: 14px;
+                    padding: 10mm;
+                    font-size: 10pt;
                 }}
-                
                 .container {{
-                    max-width: 1000px;
-                    margin: 0 auto;
+                    max-width: 100%;
+                    margin: 0;
                 }}
-                
                 table {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 20px 0;
+                    margin: 10mm 0;
                     table-layout: fixed;
                 }}
-                
                 th, td {{
-                    padding: 8px;
+                    padding: 3mm;
                     text-align: left;
                     border: 1px solid #ddd;
                     word-wrap: break-word;
+                    font-size: 8pt;
                 }}
-                
-                /* Column alignment improvements for deviation statement */
+                /* Column alignment */
                 td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7), 
                 td:nth-child(8), td:nth-child(9), td:nth-child(10), td:nth-child(11), 
                 td:nth-child(12) {{ 
-                    text-align: right; /* Right-align all numeric columns */
+                    text-align: right;
                 }}
                 td:nth-child(1) {{ 
-                    text-align: center; /* Center-align serial numbers */
+                    text-align: center;
                 }}
-                
-                /* Column width specifications */
-                th:nth-child(1), td:nth-child(1) {{ width: 6%; }}  /* Item No */
-                th:nth-child(2), td:nth-child(2) {{ width: 25%; }} /* Description */
-                th:nth-child(3), td:nth-child(3) {{ width: 6%; }}  /* Unit */
-                th:nth-child(4), td:nth-child(4) {{ width: 8%; }}  /* Qty WO */
-                th:nth-child(5), td:nth-child(5) {{ width: 8%; }}  /* Rate */
-                th:nth-child(6), td:nth-child(6) {{ width: 8%; }}  /* Amt WO */
-                th:nth-child(7), td:nth-child(7) {{ width: 8%; }}  /* Qty Exec */
-                th:nth-child(8), td:nth-child(8) {{ width: 8%; }}  /* Amt Exec */
-                th:nth-child(9), td:nth-child(9) {{ width: 6%; }}  /* Excess Qty */
-                th:nth-child(10), td:nth-child(10) {{ width: 6%; }} /* Excess Amt */
-                th:nth-child(11), td:nth-child(11) {{ width: 6%; }} /* Saving Qty */
-                th:nth-child(12), td:nth-child(12) {{ width: 6%; }} /* Saving Amt */
-                th:nth-child(13), td:nth-child(13) {{ width: 5%; }} /* Remarks */
-                
+                /* Column widths in mm */
+                th:nth-child(1), td:nth-child(1) {{ width: 15mm; }}
+                th:nth-child(2), td:nth-child(2) {{ width: 50mm; }}
+                th:nth-child(3), td:nth-child(3) {{ width: 15mm; }}
+                th:nth-child(4), td:nth-child(4) {{ width: 20mm; }}
+                th:nth-child(5), td:nth-child(5) {{ width: 20mm; }}
+                th:nth-child(6), td:nth-child(6) {{ width: 20mm; }}
+                th:nth-child(7), td:nth-child(7) {{ width: 20mm; }}
+                th:nth-child(8), td:nth-child(8) {{ width: 20mm; }}
+                th:nth-child(9), td:nth-child(9) {{ width: 15mm; }}
+                th:nth-child(10), td:nth-child(10) {{ width: 15mm; }}
+                th:nth-child(11), td:nth-child(11) {{ width: 15mm; }}
+                th:nth-child(12), td:nth-child(12) {{ width: 15mm; }}
+                th:nth-child(13), td:nth-child(13) {{ width: 15mm; }}
                 th {{
                     background-color: #f5f5f5;
                     font-weight: bold;
                 }}
-                
                 .amount {{
                     text-align: right;
                 }}
-                
-                /* CRITICAL: Print-specific styles - MANDATORY LANDSCAPE for 13 columns */
                 @media print {{
-                    @page {{ size: A4 landscape; margin: 0.5in; }}
-                    body {{ font-size: 12px; }}
+                    @page {{ size: A4 landscape; margin: 10mm !important; }}
+                    body {{ font-size: 8pt; }}
                     .container {{ max-width: none; width: 100%; }}
                     table {{ page-break-inside: auto; }}
                     tr {{ page-break-inside: avoid; }}
