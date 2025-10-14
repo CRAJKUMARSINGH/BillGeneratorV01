@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -26,8 +25,8 @@
             </tr>
         </thead>
         <tbody>
-            {% if data.items and data.items is iterable %}
-                {% for item in data.items %}
+            {% if data.item_list and data.item_list is iterable and data.item_list|length > 0 %}
+                {% for item in data.item_list %}
                     <tr>
                         <td>{{ item.serial_no | default("") }}</td>
                         <td>{{ item.remark | default("") }}</td>

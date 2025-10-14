@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -108,25 +107,25 @@
                 <td></td>
                 <td>SD @ 10%</td>
                 <td></td>
-                <td>{{ (data.totals.payable_amount * 0.10) | round(0) | default(112018) }}</td>
+                <td>{{ data.sd_amount | round(0) | default(112018) }}</td>
             </tr>
             <tr>
                 <td></td>
                 <td>IT @ 2%</td>
                 <td></td>
-                <td>{{ (data.totals.payable_amount * 0.02) | round(0) | default(22404) }}</td>
+                <td>{{ data.it_amount | round(0) | default(22404) }}</td>
             </tr>
             <tr>
                 <td></td>
                 <td>GST @ 2% Even</td>
                 <td></td>
-                <td>{{ (data.totals.payable_amount * 0.02) | round(0, "ceil") | int // 2 * 2 | default(22404) }}</td>
+                <td>{{ data.gst_amount | round(0) | default(22404) }}</td>
             </tr>
             <tr>
                 <td></td>
                 <td>LC @ 1%</td>
                 <td></td>
-                <td>{{ (data.totals.payable_amount * 0.01) | round(0) | default(11202) }}</td>
+                <td>{{ data.lc_amount | round(0) | default(11202) }}</td>
             </tr>
             <tr>
                 <td></td>

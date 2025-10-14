@@ -32,7 +32,7 @@ class EnhancedDocumentGenerator:
         self.extra_items_data = data.get('extra_items_data', pd.DataFrame())
         
         # Use cached template environment
-        template_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
+        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
         cache_key = template_dir
         
         if cache_key not in self._template_env_cache:
@@ -630,15 +630,22 @@ class EnhancedDocumentGenerator:
         
         # Generate other documents using templates
         try:
-            documents['Deviation Statement'] = self._render_template('deviation_statement.html') 
-            documents['Final Bill Scrutiny Sheet'] = self._render_template('note_sheet.html')
+            # Use specialized renderers for deviation statement, extra items, certificate II, and certificate III
+            documents['Deviation Statement'] = self.template_renderer.render_deviation_statement(
+                self.title_data, self.work_order_data, self.extra_items_data)
+            documents['Final Bill Scrutiny Sheet'] = self.template_renderer.render_note_sheet(
+                self.title_data, self.work_order_data, self.extra_items_data)
             
             # Only generate Extra Items document if there are extra items
             if self._has_extra_items():
-                documents['Extra Items Statement'] = self._render_template('extra_items.html')
+                documents['Extra Items Statement'] = self.template_renderer.render_extra_items(
+                    self.title_data, self.work_order_data, self.extra_items_data)
             
-            documents['Certificate II'] = self._render_template('certificate_ii.html')
-            documents['Certificate III'] = self._render_template('certificate_iii.html')
+            # Use specialized renderers for Certificates
+            documents['Certificate II'] = self.template_renderer.render_certificate_ii(
+                self.title_data, self.work_order_data, self.extra_items_data)
+            documents['Certificate III'] = self.template_renderer.render_certificate_iii(
+                self.title_data, self.work_order_data, self.extra_items_data)
         except Exception as template_error:
             print(f"Template rendering failed, falling back to programmatic generation: {template_error}")
             # Fallback to programmatic generation if templates fail (but keep First Page)
@@ -655,19 +662,6 @@ class EnhancedDocumentGenerator:
                 documents['Certificate II'] = self._generate_certificate_ii()
             if 'Certificate III' not in documents:
                 documents['Certificate III'] = self._generate_certificate_iii()
-        except Exception as e:
-            print(f"Template rendering failed, falling back to programmatic generation: {e}")
-            # Fallback to programmatic generation if templates fail
-            documents['First Page Summary'] = self._generate_first_page()
-            documents['Deviation Statement'] = self._generate_deviation_statement()
-            documents['Final Bill Scrutiny Sheet'] = self._generate_final_bill_scrutiny()
-            
-            # Only generate Extra Items document if there are extra items
-            if self._has_extra_items():
-                documents['Extra Items Statement'] = self._generate_extra_items_statement()
-            
-            documents['Certificate II'] = self._generate_certificate_ii()
-            documents['Certificate III'] = self._generate_certificate_iii()
         
         return documents
     
