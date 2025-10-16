@@ -1,141 +1,148 @@
 #!/usr/bin/env python3
 """
-Test script to verify zero rate handling matches VBA behavior
+Test script to verify zero rate item handling in first page template
 """
 
 import pandas as pd
-import sys
 import os
-from pathlib import Path
+import sys
+from jinja2 import Environment, FileSystemLoader
 
-# Add the current directory to Python path
+# Add the project root to the path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from utils.first_page_generator import FirstPageGenerator
+from utils.template_renderer import TemplateRenderer
 
-def test_zero_rate_handling():
-    """Test that zero rates are handled correctly like in VBA"""
-    print("Testing Zero Rate Handling...")
-    
-    # Create sample data with zero rates
-    work_order_data = pd.DataFrame([
-        {
-            'Item No.': '001',
-            'Description': 'Excavation in ordinary soil',
-            'Unit': 'CuM',
-            'Quantity Since': 50.0,
-            'Rate': 1200.0,
-            'Remark': 'Standard rate item'
-        },
-        {
-            'Item No.': '002',
-            'Description': 'Free item - no charge',
-            'Unit': 'No',
-            'Quantity Since': 5.0,
-            'Rate': 0.0,
-            'Remark': 'Complimentary item'
-        },
-        {
-            'Item No.': '003',
-            'Description': 'Standard concrete work',
-            'Unit': 'CuM',
-            'Quantity Since': 25.5,
-            'Rate': 8500.0,
-            'Remark': 'Regular rate item'
-        }
-    ])
-    
-    extra_items_data = pd.DataFrame([
-        {
-            'Item No.': 'EX01',
-            'Description': 'Additional electrical work',
-            'Unit': 'Mtr',
-            'Quantity': 100.0,
-            'Rate': 120.0,
-            'Remark': 'Extra work'
-        },
-        {
-            'Item No.': 'EX02',
-            'Description': 'Free inspection',
-            'Unit': 'No',
-            'Quantity': 1.0,
-            'Rate': 0.0,
-            'Remark': 'No charge'
-        }
-    ])
-    
+def create_test_data():
+    """Create test data with zero rate items"""
+    # Sample title data
     title_data = {
-        'Name of Work ;-': 'Test Infrastructure Project',
-        'Name of Contractor or supplier :': 'ABC Construction Ltd',
-        'Date': '15-10-2025'
+        'Project Name': 'Test Road Construction Project',
+        'Contract No': 'CT-2025-001',
+        'Work Order No': 'WO-2025-001',
+        'Contractor Name': 'ABC Construction Ltd.',
+        'Bill Number': 'First',
+        'Bill Type': 'Final'
     }
     
-    # Generate First Page
-    generator = FirstPageGenerator()
-    output_path = "test_first_page.xlsx"
+    # Sample work order data with zero rate items
+    work_order_data = pd.DataFrame([
+        {
+            'Item No.': '1',
+            'Description': 'Excavation in Hard Rock',
+            'Unit': 'Cu.M',
+            'Quantity Since': 150.50,
+            'Quantity Upto': 150.50,
+            'Rate': 1500.00,
+            'Amount': 225750.00,
+            'Remark': 'Completed'
+        },
+        {
+            'Item No.': '2',
+            'Description': 'Providing and Laying Cement Concrete M20',
+            'Unit': 'Cu.M',
+            'Quantity Since': 85.25,
+            'Quantity Upto': 85.25,
+            'Rate': 4500.00,
+            'Amount': 383625.00,
+            'Remark': 'In Progress'
+        },
+        {
+            'Item No.': '3',
+            'Description': 'Supply of Cement (Zero Rate Item)',
+            'Unit': 'Bags',
+            'Quantity Since': 500,
+            'Quantity Upto': 500,
+            'Rate': 0.00,
+            'Amount': 0.00,
+            'Remark': 'Zero rate item'
+        },
+        {
+            'Item No.': '4',
+            'Description': 'Free Transportation (Blank Rate)',
+            'Unit': 'Trip',
+            'Quantity Since': 10,
+            'Quantity Upto': 10,
+            'Rate': '',
+            'Amount': 0.00,
+            'Remark': 'Free service'
+        }
+    ])
+    
+    # Sample extra items data with zero rate items
+    extra_items_data = pd.DataFrame([
+        {
+            'Item No.': 'E1',
+            'Description': 'Emergency Repairs',
+            'Unit': 'Lot',
+            'Quantity': 1,
+            'Rate': 5000,
+            'Amount': 5000,
+            'Remark': 'Urgent repair work'
+        },
+        {
+            'Item No.': 'E2',
+            'Description': 'Free Inspection (Zero Rate)',
+            'Unit': 'Visit',
+            'Quantity': 3,
+            'Rate': 0.00,
+            'Amount': 0.00,
+            'Remark': 'Complimentary service'
+        }
+    ])
+    
+    return title_data, work_order_data, extra_items_data
+
+def test_zero_rate_handling():
+    """Test that zero rate items are handled correctly"""
+    print("Testing Zero Rate Item Handling")
+    print("=" * 40)
+    
+    # Create test data
+    title_data, work_order_data, extra_items_data = create_test_data()
+    print("✅ Test data created")
+    
+    # Initialize template renderer
+    renderer = TemplateRenderer()
+    print("✅ Template renderer initialized")
     
     try:
-        generator.generate_first_page(work_order_data, extra_items_data, title_data, output_path)
-        print(f"✅ First Page generated successfully: {output_path}")
+        # Render first page template
+        html_content = renderer.render_first_page(title_data, work_order_data, extra_items_data)
+        print("✅ First page template rendered")
         
-        # Verify the file was created
-        if Path(output_path).exists():
-            print("✅ Output file created successfully")
-            # Clean up test file
-            Path(output_path).unlink()
-            print("✅ Test file cleaned up")
-            return True
+        # Check that the HTML contains the expected content
+        if 'Supply of Cement (Zero Rate Item)' in html_content:
+            print("✅ Zero rate item description found")
         else:
-            print("❌ Output file was not created")
+            print("❌ Zero rate item description not found")
             return False
             
-    except Exception as e:
-        print(f"❌ Error generating First Page: {e}")
-        return False
-
-def test_vba_like_behavior():
-    """Test that the behavior matches VBA specifications"""
-    print("\nTesting VBA-like Behavior...")
-    
-    # Test case 1: Non-zero rate should populate amounts
-    print("  Test 1: Non-zero rate items")
-    # This is handled in the FirstPageGenerator where non-zero rates populate Column G and H
-    
-    # Test case 2: Zero rate should leave amount columns blank
-    print("  Test 2: Zero rate items")
-    # This is handled in the FirstPageGenerator where zero rates leave Column G and H blank
-    
-    # Test case 3: Quantity Since should be 0 when Quantity Upto has value
-    print("  Test 3: Quantity Since behavior")
-    # This is handled in the FirstPageGenerator where Column B is set to 0 when Column C has value
-    
-    print("✅ VBA-like behavior tests completed")
-    return True
-
-def main():
-    """Main test function"""
-    print("🚀 Testing Zero Rate Handling Enhancements")
-    print("=" * 50)
-    
-    # Run tests
-    test1_result = test_zero_rate_handling()
-    test2_result = test_vba_like_behavior()
-    
-    # Summary
-    print("\n" + "=" * 50)
-    print("📊 TEST SUMMARY")
-    print("=" * 50)
-    print(f"Zero Rate Handling Test: {'✅ PASS' if test1_result else '❌ FAIL'}")
-    print(f"VBA-like Behavior Test: {'✅ PASS' if test2_result else '❌ FAIL'}")
-    
-    if test1_result and test2_result:
-        print("\n🎉 All tests passed!")
-        print("✅ Application enhancements for zero rate handling are working correctly")
+        if 'Free Transportation (Blank Rate)' in html_content:
+            print("✅ Blank rate item description found")
+        else:
+            print("❌ Blank rate item description not found")
+            return False
+            
+        if 'Free Inspection (Zero Rate)' in html_content:
+            print("✅ Extra zero rate item description found")
+        else:
+            print("❌ Extra zero rate item description not found")
+            return False
+            
+        # Save the HTML for manual inspection
+        with open('test_zero_rate_output.html', 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        print("✅ HTML output saved to test_zero_rate_output.html")
+        
+        print("\n🎉 Zero rate item handling test passed!")
         return True
-    else:
-        print("\n💥 Some tests failed!")
+        
+    except Exception as e:
+        print(f"❌ Zero rate handling test failed: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    test_zero_rate_handling()

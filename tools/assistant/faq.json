@@ -1,0 +1,15 @@
+{
+  "how to generate pdf": "Go to 'Output → PDF', choose statutory format, click Generate.",
+  "xml validation failed": "Ensure XML conforms to government schema under /schemas/latest.xsd.",
+  "csv format error": "Check that all required columns exist in your input file.",
+  "file not found": "Verify the file path and ensure the file exists.",
+  "memory error": "Try processing smaller batches of files.",
+  "slow performance": "Close other applications and ensure sufficient RAM is available.",
+  "how to install": "Clone the repository, install dependencies with 'pip install -r requirements.txt', then run 'python app.py'",
+  "supported formats": "The application supports PDF, XML, and CSV output formats.",
+  "customize templates": "Templates can be customized in the templates directory.",
+  "batch processing": "Use the batch processor to process multiple files at once.",
+  "export data": "Data can be exported using the API endpoints or command line tools.",
+  "add new format": "New formats can be added by creating new template files and updating the generator.",
+  "validate output": "Use the validation tools to check that outputs meet statutory requirements."
+}

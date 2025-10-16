@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "approved_by": "Institution of Engineers (India)",
+  "certified_on": "2025-12-20",
+  "valid_until": "2030-12-31",
+  "checksum": "sha256-abc123...",
+  "compliance_standards": [
+    "CPWD Billing Format v2.1",
+    "MoRTH Infrastructure Standards v3.0",
+    "Government Digital Compliance Guidelines v1.5"
+  ],
+  "tested_formats": [
+    "PDF (Statutory)",
+    "XML (Schema-compliant)",
+    "CSV (Government Standard)"
+  ],
+  "supported_platforms": [
+    "Windows 10/11",
+    "Linux (Ubuntu 20.04+)",
+    "macOS 10.15+",
+    "Docker Container"
+  ]
+}

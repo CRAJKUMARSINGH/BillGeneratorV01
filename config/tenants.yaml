@@ -1,0 +1,15 @@
+rajasthan:
+  db_url: "postgresql://user:pass@host/rajasthan_bills"
+  branding: "PWD Rajasthan"
+uttar_pradesh:
+  db_url: "postgresql://user:pass@host/up_bills"
+  branding: "PWD UP"
+maharashtra:
+  db_url: "postgresql://user:pass@host/maharashtra_bills"
+  branding: "PWD Maharashtra"
+karnataka:
+  db_url: "postgresql://user:pass@host/karnataka_bills"
+  branding: "PWD Karnataka"
+tamil_nadu:
+  db_url: "postgresql://user:pass@host/tamilnadu_bills"
+  branding: "PWD Tamil Nadu"

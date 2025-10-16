@@ -1,182 +1,225 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Memorandum of Payments</title>
+    <title>III. Memorandum of Payments</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 10pt; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid black; padding: 5px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        p { margin: 10px 0; }
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 10pt; }
+        h1 { text-align: center; margin: 5px 0; }
+        table { border-collapse: collapse; width: 180.06mm; margin: 10px auto; }
+        th, td { border: 1px solid black; padding: 3px; text-align: left; vertical-align: top; }
+        th { font-weight: bold; text-align: center; }
+        .header-info { text-align: center; margin: 10px auto; width: 180.06mm; }
+        .payment-details { margin: 20px auto; width: 180.06mm; text-align: center; }
+        .signature { text-align: right; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h2>III. MEMORANDUM OF PAYMENTS</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>S.No.</th>
-                <th>Description</th>
-                <th>Entry No.</th>
-                <th>Amount Rs.</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>1.</td>
-                <td>Total value of work actually measured, as per Account I, Col. 5, Entry [A]</td>
-                <td>[A]</td>
-                <td>{{ data.totals.grand_total | default(1120175) }}</td>
-            </tr>
-            <tr>
-                <td>2.</td>
-                <td>Total up-to-date advance payments for work not yet measured as per details given below:</td>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>(a) Total as per previous bill</td>
-                <td>[B]</td>
-                <td>Nil.</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>(b) Since previous bill</td>
-                <td>[D]</td>
-                <td>Nil.</td>
-            </tr>
-            <tr>
-                <td>3.</td>
-                <td>Total up-to-date secured advances on security of materials</td>
-                <td>[C]</td>
-                <td>Nil.</td>
-            </tr>
-            <tr>
-                <td>4.</td>
-                <td>Total (Items 1 + 2 + 3) A+B+C</td>
-                <td></td>
-                <td>{{ data.total_123 | default(1120175) }}</td>
-            </tr>
-            <tr>
-                <td colspan="4">Figures for works abstract</td>
-            </tr>
-            <tr>
-                <td>5.</td>
-                <td>Deduct: Amount withheld</td>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>(a) From previous bill as per last Running Account Bill</td>
-                <td></td>
-                <td>Nil.</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>(b) From this bill</td>
-                <td></td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td>6.</td>
-                <td>Balance i.e. "up-to-date" payments (Item 4-5)</td>
-                <td></td>
-                <td>{{ data.balance_4_minus_5 | default(1120175) }}</td>
-            </tr>
-            <tr>
-                <td>7.</td>
-                <td> amount of payments already made as per Entry (K), of last Running Account Bill
-                <td>[K]</td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td>8.</td>
-                <td>Payments now to be made, as detailed below:</td>
-                <td></td>
-                <td>{{ data.payable_amount | default(952147) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>(a) By recovery of amounts creditable to this work</td><td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>SD @ 10%</td>
-                <td></td>
-                <td>{{ data.sd_amount | round(0) | default(112018) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>IT @ 2%</td>
-                <td></td>
-                <td>{{ data.it_amount | round(0) | default(22404) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>GST @ 2% Even</td>
-                <td></td>
-                <td>{{ data.gst_amount | round(0) | default(22404) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>LC @ 1%</td>
-                <td></td>
-                <td>{{ data.lc_amount | round(0) | default(11202) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>Deposit</td>
-                <td></td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>Liquidated Damages</td>
-                <td></td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>Total recovery of amounts creditable to this work</td>
-                <td></td>
-                <td>{{ data.total_recovery | default(168028) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>Total 5(b) + 8(a)</td>
-                <td>[G]</td>
-                <td>{{ data.total_recovery | default(168028) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>(b) By recovery of amount creditable to other works</td>
-                <td>[b]</td>
-                <td>Nil.</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>(c) By cheque</td>
-                <td>[c]</td>
-                <td>{{ data.by_cheque | default(952147) }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>Total 8(b) + 8(c)</td>
-                <td>[H]</td>
-                <td>{{ data.by_cheque | default(952147) }}</td>
-            </tr>
-        </tbody>
-    </table>
-    <p>Pay Rs. {{ data.payable_amount | default(952147) }}</p>
-    <p>Pay Rupees {{ data.amount_words | default("Nine Lakh Fifty-Two Thousand One Hundred Forty-Seven Only") }} (by cheque)</p>
-    <p>Dated the 20 Dated initials of Disbursing Officer</p>
-    <p>Received Rupees {{ data.amount_words | default("Nine Lakh Fifty-Two Thousand One Hundred Forty-Seven Only") }} (by cheque) as per above memorandum, on account of this bill</p>
+
+<h1>III. MEMORANDUM OF PAYMENTS</h1>
+
+<table>
+    <tr>
+        <th width="1.82mm">S.No.</th>
+        <th width="17.12mm">Description</th>
+        <th width="121.87mm">Entry No.</th>
+        <th width="4.03mm"></th>
+        <th width="17.72mm">Amount Rs.</th>
+        <th width="4.03mm"></th>
+        <th width="13.49mm"></th>
+    </tr>
+    <tr>
+        <td>1.</td>
+        <td>Total value of work actually measured, as per Account I, Col. 5, Entry [A]</td>
+        <td>[A]</td>
+        <td></td>
+        <td>{{ data.totals.grand_total | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>2.</td>
+        <td>Total up-to-date advance payments for work not yet measured as per details given below:</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>(a) Total as per previous bill</td>
+        <td>[B]</td>
+        <td></td>
+        <td>Nil</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>(b) Since previous bill</td>
+        <td>[D]</td>
+        <td></td>
+        <td>Nil</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>3.</td>
+        <td>Total up-to-date secured advances on security of materials</td>
+        <td>[C]</td>
+        <td></td>
+        <td>Nil</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>4.</td>
+        <td>Total (Items 1 + 2 + 3) A+B+C</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.grand_total | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>5.</td>
+        <td>Deduct: Amount withheld</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>(a) From previous bill as per last Running Account Bill</td>
+        <td>[5]</td>
+        <td></td>
+        <td>Nil</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>(b) From this bill</td>
+        <td></td>
+        <td></td>
+        <td>Nil</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>6.</td>
+        <td>Balance i.e. "up-to-date" payments (Item 4-5)</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.grand_total | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>7.</td>
+        <td>Total amount of payments already made as per Entry (K)</td>
+        <td>[K]</td>
+        <td></td>
+        <td>0</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>8.</td>
+        <td>Payments now to be made, as detailed below:</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.net_payable | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>(a) By recovery of amounts creditable to this work</td>
+        <td>[a]</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>SD @ 10%</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.sd_amount | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>IT @ 2%</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.it_amount | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>GST @ 2%</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.gst_amount | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>LC @ 1%</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.lc_amount | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Total recovery</td>
+        <td></td>
+        <td></td>
+        <td>{{ data.totals.total_deductions | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>(b) By recovery of amount creditable to other works</td>
+        <td>[b]</td>
+        <td></td>
+        <td>Nil</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>(c) By cheque</td>
+        <td>[c]</td>
+        <td></td>
+        <td>{{ data.totals.net_payable | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
+<div class="payment-details">
+    <p>Pay Rs. {{ data.totals.net_payable | round(0) | int }}</p>
+    <p>Pay Rupees {{ data.payable_words }} (by cheque)</p>
+    <p>Dated the {{ current_date.strftime('%d %m %Y') | replace(' ', ' / ') }}</p>
+    <p>Dated initials of Disbursing Officer</p>
+    <p>Received Rupees {{ data.payable_words }} (by cheque) as per above memorandum, on account of this bill</p>
     <p>Signature of Contractor</p>
-    <p>Paid by me, vide cheque No. dated 20</p>
+    <p>Paid by me, vide cheque No. _______ dated {{ current_date.strftime('%d %m %Y') | replace(' ', ' / ') }}</p>
     <p>Dated initials of person actually making the payment</p>
+</div>
+
 </body>
 </html>

@@ -1,192 +1,125 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Deviation Statement</title>
     <style>
-        @page { 
-            size: A4 landscape; 
-            margin: 10mm 10mm 10mm 10mm;
-        }
-        * { box-sizing: border-box; }
-        body { 
-            font-family: Arial, sans-serif; 
-            font-size: 8pt;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            width: 277mm;
-            min-height: 190mm;
-            margin: 10mm;
-        }
-        h2 { 
-            text-align: center; 
-            margin: 0 0 10mm 0; 
-            font-size: 14pt; 
-        }
-        p { 
-            margin: 2mm 0; 
-            font-size: 9pt; 
-        }
-        table {
-            width: 277mm;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin: 0 auto;
-            border: 1px solid black;
-        }
-        thead { display: table-header-group; }
-        tr { break-inside: avoid; }
-        th, td {
-            border: 1px solid black;
-            padding: 3px;
-            font-size: 7pt;
-            vertical-align: top;
-            word-wrap: break-word;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-align: center;
-        }
-        .bold { font-weight: bold; }
-        
-        /* Column widths for deviation statement */
-        table col.col-item-no { width: 6mm; }
-        table col.col-description { width: 118mm; }
-        table col.col-unit { width: 10.5mm; }
-        table col.col-qty-wo { width: 10.5mm; }
-        table col.col-rate { width: 10.5mm; }
-        table col.col-amt-wo { width: 10.5mm; }
-        table col.col-qty-executed { width: 10.5mm; }
-        table col.col-amt-executed { width: 10.5mm; }
-        table col.col-excess-qty { width: 10.5mm; }
-        table col.col-excess-amt { width: 10.5mm; }
-        table col.col-saving-qty { width: 10.5mm; }
-        table col.col-saving-amt { width: 10.5mm; }
-        table col.col-remarks { width: 48mm; }
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 10pt; }
+        h1 { text-align: center; margin: 5px 0; }
+        table { border-collapse: collapse; width: 198.5mm; margin: 10px auto; }
+        th, td { border: 1px solid black; padding: 3px; text-align: left; vertical-align: top; }
+        th { font-weight: bold; text-align: center; }
+        .header-info { text-align: left; margin: 10px auto; width: 198.5mm; }
+        .summary-table { border: none; width: auto; margin: 10px auto; text-align: left; }
+        .summary-table tr td:first-child { text-align: left; padding-left: 20%; }
+        .summary-table td { border: none; padding: 3px; text-align: right; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Deviation Statement</h2>
-        <p>Agreement No: {{ header_data[12][4] if header_data and header_data|length > 12 and header_data[12]|length > 4 else '48/2024-25' }}</p>
-        <p>Name of Work: {{ header_data[8][1] if header_data and header_data|length > 8 and header_data[8]|length > 1 else 'Electric Repair and MTC work at Govt. Ambedkar hostel Ambamata, Govardhanvilas, Udaipur' }}</p>
-        <table>
-            <colgroup>
-                <col class="col-item-no">
-                <col class="col-description">
-                <col class="col-unit">
-                <col class="col-qty-wo">
-                <col class="col-rate">
-                <col class="col-amt-wo">
-                <col class="col-qty-executed">
-                <col class="col-amt-executed">
-                <col class="col-excess-qty">
-                <col class="col-excess-amt">
-                <col class="col-saving-qty">
-                <col class="col-saving-amt">
-                <col class="col-remarks">
-            </colgroup>
-            <thead>
-                <tr>
-                    <th style="width: 6mm;">ITEM No.</th>
-                    <th style="width: 118mm;">Description</th>
-                    <th style="width: 10.5mm;">Unit</th>
-                    <th style="width: 10.5mm;">Qty as per Work Order</th>
-                    <th style="width: 10.5mm;">Rate</th>
-                    <th style="width: 10.5mm;">Amt as per Work Order Rs.</th>
-                    <th style="width: 10.5mm;">Qty Executed</th>
-                    <th style="width: 10.5mm;">Amt as per Executed Rs.</th>
-                    <th style="width: 10.5mm;">Excess Qty</th>
-                    <th style="width: 10.5mm;">Excess Amt Rs.</th>
-                    <th style="width: 10.5mm;">Saving Qty</th>
-                    <th style="width: 10.5mm;">Saving Amt Rs.</th>
-                    <th style="width: 48mm;">REMARKS/ REASON</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if data['items'] and data['items'] is iterable and data['items']|length > 0 %}
-                    {% for item in data['items'] %}
-                        <tr>
-                            <td style="width: 6mm;">{{ item.serial_no | default("") }}</td>
-                            <td style="width: 118mm;">{{ item.description | default("") }}</td>
-                            <td style="width: 10.5mm;">{{ item.unit | default("") }}</td>
-                            <td style="width: 10.5mm;">{{ item.qty_wo if item.unit|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.rate if item.unit|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.amt_wo if item.unit|trim and item.rate|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.qty_bill if item.unit|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.amt_bill if item.unit|trim and item.rate|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.excess_qty if item.unit|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.excess_amt if item.unit|trim and item.rate|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.saving_qty if item.unit|trim else "" }}</td>
-                            <td style="width: 10.5mm;">{{ item.saving_amt if item.unit|trim and item.rate|trim else "" }}</td>
-                            <td style="width: 48mm;">{{ item.remark | default("") }}</td>
-                        </tr>
-                    {% endfor %}
+
+<h1>Deviation Statement</h1>
+
+<div class="header-info">
+{% if data.header %}
+    <pre>
+{% for row in data.header %}
+    {% if row|length > 0 %}
+        {% for item in row %}
+            {% if item|trim %}
+                {% set trimmed = item|trim %}
+                {% if trimmed|length >= 10 and trimmed[4:5] == '-' and trimmed[7:8] == '-' and trimmed[:4]|int > 0 and trimmed[5:7]|int > 0 and trimmed[8:10]|int > 0 %}
+                    {{ trimmed[8:10] }}/{{ trimmed[5:7] }}/{{ trimmed[:4] }}
                 {% else %}
-                    <tr><td colspan="13">No deviation items available</td></tr>
+                    {{ trimmed }}
                 {% endif %}
-                {% if data.summary %}
-                    <tr>
-                        <td colspan="3"></td>
-                        <td class="bold">Grand Total Rs.</td>
-                        <td></td>
-                        <td>{{ data.summary.work_order_total | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.executed_total | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.overall_excess | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.overall_saving | default("") }}</td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td colspan="3"></td>
-                        <td class="bold">Add Tender Premium ({{ "%.2f%%" % (data.summary.premium.percent * 100 if data.summary.premium.percent is defined else 0) }})</td>
-                        <td></td>
-                        <td>{{ data.summary.tender_premium_f | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.tender_premium_h | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.tender_premium_j | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.tender_premium_l | default("") }}</td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td colspan="3"></td>
-                        <td class="bold">Grand Total including Tender Premium Rs.</td>
-                        <td></td>
-                        <td>{{ data.summary.grand_total_f | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.grand_total_h | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.grand_total_j | default("") }}</td>
-                        <td></td>
-                        <td>{{ data.summary.grand_total_l | default("") }}</td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td colspan="3"></td>
-                        <td class="bold">
-                            {% if data.summary.net_difference is defined and data.summary.net_difference|float > 0 %}
-                                Overall Excess With Respect to the Work Order Amount Rs.
-                            {% else %}
-                                Overall Saving With Respect to the Work Order Amount Rs.
-                            {% endif %}
-                        </td>
-                        <td colspan="3"></td>
-                        <td>{{ data.summary.net_difference | default("") }}</td>
-                        <td colspan="5"></td>
-                    </tr>
-                {% else %}
-                    <tr><td colspan="13">No summary data available</td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+    </pre>
+{% else %}
+    <p>Agreement No: {{ data.agreement_no }}</p>
+    <p>Name of Contractor or supplier: {{ data.name_of_firm }}</p>
+    <p>Name of Work: {{ data.name_of_work }}</p>
+{% endif %}
+</div>
+
+<table>
+    <tr>
+        <th width="6mm">ITEM No.</th>
+        <th width="95mm">Description</th>
+        <th width="10mm">Unit</th>
+        <th width="10mm">Qty as per Work Order</th>
+        <th width="12mm">Rate</th>
+        <th width="12mm">Amt as per Work Order Rs.</th>
+        <th width="12mm">Qty Executed</th>
+        <th width="12mm">Amt as per Executed Rs.</th>
+        <th width="12mm">Excess Qty</th>
+        <th width="12mm">Excess Amt Rs.</th>
+        <th width="12mm">Saving Qty</th>
+        <th width="12mm">Saving Amt Rs.</th>
+        <th width="40mm">REMARKS/ REASON.</th>
+    </tr>
+    {% for item in data.deviation_items %}
+    <tr>
+        <td>{{ item.serial_no or '' }}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ item.description or '' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ item.unit or '' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.qty_wo) if item.qty_wo is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.rate) if item.rate is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.amt_wo) if item.amt_wo is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.qty_bill) if item.qty_bill is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.amt_bill) if item.amt_bill is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.excess_qty) if item.excess_qty is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.excess_amt) if item.excess_amt is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.saving_qty) if item.saving_qty is defined else '0.00' }}{% endif %}</td>
+        <td>{% if item.rate and item.rate != 0 %}{{ "%.2f" | format(item.saving_amt) if item.saving_amt is defined else '0.00' }}{% endif %}</td>
+        <td>{{ item.remark or '' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<table class="summary-table">
+    <tr>
+        <td>Grand Total Rs.</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.work_order_total) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.executed_total) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.overall_excess) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.overall_saving) }}</td>
+    </tr>
+    <tr>
+        <td>
+        {% if data.tender_premium_percent > 0 %}
+            Add Tender Premium ({{ "%.2f" | format(data.tender_premium_percent * 100) }}%)
+        {% else %}
+            Deduct Tender Premium ({{ "%.2f" | format(-data.tender_premium_percent * 100) }}% below)
+        {% endif %}
+        </td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_f) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_h) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_j) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_l) }}</td>
+    </tr>
+    <tr>
+        <td>Grand Total including Tender Premium Rs.</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_f) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_h) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_j) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_l) }}</td>
+    </tr>
+    <tr>
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr>
+        <td>Overall {% if data.deviation_summary.net_difference < 0 %}Saving{% else %}Excess{% endif %} With Respect to the Work Order Amount Rs.</td>
+        <td colspan="4">{{ "%.2f" | format(data.deviation_summary.net_difference) }}</td>
+    </tr>
+    <tr>
+        <td>Percentage of Deviation %</td>
+        <td colspan="4">{{ "%.2f" | format( (data.deviation_summary.net_difference / data.deviation_summary.grand_total_f * 100) | abs ) }}%</td>
+    </tr>
+</table>
+
 </body>
 </html>

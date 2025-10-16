@@ -1,105 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Extra Items</title>
     <style>
-        @page { 
-            size: A4 portrait; 
-            margin: 10mm 14mm 10mm 14mm;
-        }
-        * { box-sizing: border-box; }
-        body { 
-            font-family: Arial, sans-serif; 
-            font-size: 8pt;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            width: 182mm;
-            min-height: 277mm;
-            margin: 10mm 14mm;
-        }
-        h2 { 
-            text-align: center; 
-            margin: 0 0 10mm 0; 
-            font-size: 14pt; 
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin: 0 auto;
-            border: 1px solid black;
-        }
-        thead { display: table-header-group; }
-        tr { break-inside: avoid; }
-        th, td {
-            border: 1px solid black;
-            padding: 5px;
-            font-size: 8pt;
-            vertical-align: top;
-            word-wrap: break-word;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-align: center;
-        }
-        
-        /* Column widths for extra items - Total: 170.76mm fits in 182mm */
-        table col.col-serial-no { width: 9.55mm; }
-        table col.col-description { width: 63.83mm; }
-        table col.col-unit { width: 10.06mm; }
-        table col.col-quantity { width: 13.76mm; }
-        table col.col-rate { width: 13.16mm; }
-        table col.col-amount { width: 19.53mm; }
-        table col.col-remark { width: 40.87mm; }
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 10pt; }
+        h1 { text-align: center; margin: 5px 0; }
+        table { border-collapse: collapse; width: 198.5mm; margin: 10px auto; }
+        th, td { border: 1px solid black; padding: 3px; text-align: left; vertical-align: top; }
+        th { font-weight: bold; text-align: center; }
+        .header-info { text-align: left; margin: 10px auto; width: 198.5mm; }
+        .summary-row { font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Extra Items</h2>
-        <table>
-            <colgroup>
-                <col class="col-serial-no">
-                <col class="col-description">
-                <col class="col-unit">
-                <col class="col-quantity">
-                <col class="col-rate">
-                <col class="col-amount">
-                <col class="col-remark">
-            </colgroup>
-            <thead>
-                <tr>
-                    <th style="width: 9.55mm;">S. No.</th>
-                    <th style="width: 63.83mm;">Description</th>
-                    <th style="width: 10.06mm;">Unit</th>
-                    <th style="width: 13.76mm;">Quantity</th>
-                    <th style="width: 13.16mm;">Rate</th>
-                    <th style="width: 19.53mm;">Amount</th>
-                    <th style="width: 40.87mm;">Remark</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if data.item_list and data.item_list is iterable and data.item_list|length > 0 %}
-                    {% for item in data.item_list %}
-                        <tr>
-                            <td>{{ item.serial_no | default("") }}</td>
-                            <td>{{ item.description | default("") }}</td>
-                            <td>{{ item.unit | default("") }}</td>
-                            <td>{{ item.quantity | default("") }}</td>
-                            <td>{{ item.rate | default("") }}</td>
-                            <td>{{ item.amount | default("") }}</td>
-                            <td>{{ item.remark | default("") }}</td>
-                        </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr><td colspan="7">No extra items available</td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
+
+<h1>EXTRA ITEM SLIP</h1>
+
+<div class="header-info">
+    <p>Name of Work: Electric Repair and MTC work at Govt. Ambedkar hostel Ambamata, Govardhanvilas, Udaipur</p>
+    <p>Name of Contractor or supplier: M/s Seema Electrical Udaipur</p>
+    <p>Reference to work order or Agreement: 1179 Dt. 09-01-2025</p>
+</div>
+
+<table>
+    <tr>
+        <th width="11.1mm">S.No.</th>
+        <th width="74.2mm">Ref. BSR No.</th>
+        <th width="11.7mm">Particulars</th>
+        <th width="16mm">Qty.</th>
+        <th width="16mm">Unit</th>
+        <th width="15.3mm">Rate</th>
+        <th width="22.7mm">Amount</th>
+        <th width="17.6mm">Remarks</th>
+        <th width="13.9mm"></th>
+    </tr>
+    {% for item in data.extra_items %}
+    <tr>
+        <td>{{ item.serial_no or '' }}</td>
+        <td>{{ item.reference or '' }}</td>
+        <td>{{ item.description or '' }}</td>
+        <td>{{ item.quantity | round(0) | int if item.quantity else '' }}</td>
+        <td>{{ item.unit or '' }}</td>
+        <td>{{ item.rate | round(0) | int if item.rate else '' }}</td>
+        <td>{{ item.amount | round(0) | int if item.amount else '' }}</td>
+        <td>{{ item.remark or '' }}</td>
+        <td></td>
+    </tr>
+    {% endfor %}
+    <tr class="summary-row">
+        <td></td>
+        <td></td>
+        <td>Grand Total</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>{{ data.grand_total | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr class="summary-row">
+        <td></td>
+        <td></td>
+        <td>Tender Premium @ {{ "%.2f" | format(data.tender_premium_percent * 100) }}% {{ 'BELOW' if data.tender_premium_percent < 0 else '' }}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>{{ data.tender_premium | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr class="summary-row">
+        <td></td>
+        <td></td>
+        <td>Total Amount of Extra Item Executed</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>{{ data.total_executed | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
 </body>
 </html>

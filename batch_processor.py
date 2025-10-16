@@ -25,7 +25,7 @@ if str(utils_path) not in sys.path:
     sys.path.append(str(utils_path))
 
 from utils.excel_processor import ExcelProcessor
-from enhanced_document_generator_fixed import EnhancedDocumentGenerator
+from enhanced_document_generator_fixed import DocumentGenerator
 from utils.pdf_merger import PDFMerger
 
 # Configure logging
@@ -92,7 +92,7 @@ class HighPerformanceBatchProcessor:
                 raise Exception("Invalid Excel processing result")
             
             # Generate documents with optimized generator
-            doc_generator = EnhancedDocumentGenerator(result)
+            doc_generator = DocumentGenerator(result)
             html_documents = doc_generator.generate_all_documents()
             
             if not html_documents:
@@ -173,7 +173,7 @@ class HighPerformanceBatchProcessor:
         
         try:
             # Use the enhanced document generator's PDF conversion
-            doc_generator = EnhancedDocumentGenerator({})
+            doc_generator = DocumentGenerator({})
             pdf_documents = doc_generator.create_pdf_documents(html_documents)
             
             # Validate PDF sizes

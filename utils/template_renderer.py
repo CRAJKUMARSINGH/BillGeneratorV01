@@ -75,26 +75,26 @@ class TemplateRenderer:
                     # Only populate Serial No. and Description for zero rates
                     item_data = {
                         'unit': '',
-                        'quantity_since_last': '',
-                        'quantity_upto_date': '',
-                        'serial_no': serial_no,
+                        'quantity_since': 0,
+                        'quantity_upto': 0,
+                        'item_no': serial_no,
                         'description': description,
-                        'rate': '',
-                        'amount': '',
-                        'amount_previous': '',
-                        'remark': ''
+                        'rate': 0,
+                        'amount_upto': 0,
+                        'amount_since': 0,
+                        'remark': remark
                     }
                 else:
                     # For non-zero rates, populate all columns
                     item_data = {
                         'unit': unit,
-                        'quantity_since_last': f"{quantity_since:.2f}" if quantity_since > 0 else "",
-                        'quantity_upto_date': f"{quantity_upto:.2f}" if quantity_upto > 0 else "",
-                        'serial_no': serial_no,
+                        'quantity_since': quantity_since,
+                        'quantity_upto': quantity_upto,
+                        'item_no': serial_no,
                         'description': description,
-                        'rate': f"{rate:.2f}" if rate > 0 else "",
-                        'amount': f"{amount:.2f}" if amount > 0 else "",
-                        'amount_previous': "",  # As per VBA behavior
+                        'rate': rate,
+                        'amount_upto': amount,
+                        'amount_since': amount,
                         'remark': remark
                     }
                 
@@ -116,26 +116,22 @@ class TemplateRenderer:
                     # Only populate Serial No. and Description for zero rates
                     item_data = {
                         'unit': '',
-                        'quantity_since_last': '',
-                        'quantity_upto_date': '',
-                        'serial_no': serial_no,
+                        'quantity': 0,
+                        'item_no': serial_no,
                         'description': description,
-                        'rate': '',
-                        'amount': '',
-                        'amount_previous': '',
-                        'remark': ''
+                        'rate': 0,
+                        'amount': 0,
+                        'remark': remark
                     }
                 else:
                     # For non-zero rates, populate all columns
                     item_data = {
                         'unit': unit,
-                        'quantity_since_last': "",
-                        'quantity_upto_date': f"{quantity:.2f}" if quantity > 0 else "",
-                        'serial_no': serial_no,
+                        'quantity': quantity,
+                        'item_no': serial_no,
                         'description': description,
-                        'rate': f"{rate:.2f}" if rate > 0 else "",
-                        'amount': f"{amount:.2f}" if amount > 0 else "",
-                        'amount_previous': "",
+                        'rate': rate,
+                        'amount': amount,
                         'remark': remark
                     }
                 
@@ -149,16 +145,17 @@ class TemplateRenderer:
                 rate = self._safe_float(row.get('Rate', 0))
                 if rate != 0:  # Only count non-zero rate items
                     total_amount += quantity * rate
-        
+    
         # Calculate premium (typically 10%)
         premium_percent = 0.10
         premium_amount = total_amount * premium_percent
         payable_amount = total_amount + premium_amount
-        
+    
         return {
             'data': {
                 'header': header_rows,
-                'items': items,
+                'work_items': [item for item in items if 'quantity' not in item],  # Work order items
+                'extra_items': [item for item in items if 'quantity' in item],  # Extra items
                 'totals': {
                     'grand_total': f"{total_amount:.2f}",
                     'premium': {
@@ -284,21 +281,45 @@ class TemplateRenderer:
                     excess_amt = excess_qty * rate
                     saving_amt = saving_qty * rate
                     
-                    item_data = {
-                        'serial_no': serial_no,
-                        'description': description,
-                        'unit': unit,
-                        'qty_wo': f"{qty_wo:.2f}" if qty_wo > 0 else "",
-                        'rate': f"{rate:.2f}" if rate > 0 else "",
-                        'amt_wo': f"{amt_wo:.2f}" if amt_wo > 0 else "",
-                        'qty_bill': f"{qty_bill:.2f}" if qty_bill > 0 else "",
-                        'amt_bill': f"{amt_bill:.2f}" if amt_bill > 0 else "",
-                        'excess_qty': f"{excess_qty:.2f}" if excess_qty > 0 else "",
-                        'excess_amt': f"{excess_amt:.2f}" if excess_amt > 0 else "",
-                        'saving_qty': f"{saving_qty:.2f}" if saving_qty > 0 else "",
-                        'saving_amt': f"{saving_amt:.2f}" if saving_amt > 0 else "",
-                        'remark': str(row.get('Remark', ''))
-                    }
+                    # Extract remark
+                    remark = str(row.get('Remark', ''))
+                    
+                    # Apply VBA-like behavior for zero rates
+                    if rate == 0:
+                        # Only populate Serial No., Description, and Remark for zero rates
+                        item_data = {
+                            'serial_no': serial_no,
+                            'description': description,
+                            'unit': '',
+                            'qty_wo': '',
+                            'rate': '',
+                            'amt_wo': '',
+                            'qty_bill': '',
+                            'amt_bill': '',
+                            'excess_qty': '',
+                            'excess_amt': '',
+                            'saving_qty': '',
+                            'saving_amt': '',
+                            'remark': remark
+                        }
+                    else:
+                        # For non-zero rates, populate all columns
+                        # Show 0.00 values when rate > 0 but quantity is 0
+                        item_data = {
+                            'serial_no': serial_no,
+                            'description': description,
+                            'unit': unit,
+                            'qty_wo': f"{qty_wo:.2f}",  # Always show value
+                            'rate': f"{rate:.2f}",      # Always show value
+                            'amt_wo': f"{amt_wo:.2f}",  # Always show value
+                            'qty_bill': f"{qty_bill:.2f}",  # Always show value
+                            'amt_bill': f"{amt_bill:.2f}",  # Always show value
+                            'excess_qty': f"{excess_qty:.2f}",  # Always show value
+                            'excess_amt': f"{excess_amt:.2f}",  # Always show value
+                            'saving_qty': f"{saving_qty:.2f}",  # Always show value
+                            'saving_amt': f"{saving_amt:.2f}",  # Always show value
+                            'remark': remark
+                        }
                     
                     items.append(item_data)
             

@@ -15,6 +15,9 @@ from typing import Dict, List, Any, Optional, Union
 import logging
 import streamlit.components.v1 as components
 
+import logging
+import streamlit.components.v1 as components
+
 # Add utils to path for imports
 utils_path = Path(__file__).parent / "utils"
 if str(utils_path) not in sys.path:
@@ -22,7 +25,7 @@ if str(utils_path) not in sys.path:
 
 from utils.excel_processor import ExcelProcessor
 from utils.document_generator import DocumentGenerator
-from enhanced_document_generator_fixed import EnhancedDocumentGenerator
+from enhanced_document_generator_fixed import DocumentGenerator
 from utils.pdf_merger import PDFMerger
 from batch_processor import HighPerformanceBatchProcessor, StreamlitBatchInterface
 from optimized_pdf_converter import OptimizedPDFConverter
@@ -789,8 +792,8 @@ def generate_documents_excel_mode(data: Dict):
                 data['title_data'] = st.session_state.title_data
                 st.info("📝 Using your modified title information for document generation")
             
-            # Initialize EnhancedDocumentGenerator for robust HTML→PDF
-            doc_generator = EnhancedDocumentGenerator(data)
+            # Initialize DocumentGenerator for robust HTML→PDF
+            doc_generator = DocumentGenerator(data)
 
             # Generate HTML documents
             html_documents = doc_generator.generate_all_documents()
@@ -854,86 +857,51 @@ def generate_all_formats_documents(data: Dict):
                 data['title_data'] = st.session_state.title_data
                 st.info("📝 Using your modified title information for document generation")
             
-            # Initialize EnhancedDocumentGenerator
-            doc_generator = EnhancedDocumentGenerator(data)
+            # Initialize DocumentGenerator for robust HTML→PDF
+            doc_generator = DocumentGenerator(data)
+
+
+
             
-            # Generate all formats
-            st.info("🔄 Generating HTML, PDF, and DOC documents...")
-            result = doc_generator.generate_all_formats_and_zip()
-            
-            if not result['success']:
-                st.error(f"❌ Failed to generate documents: {result['error']}")
+            # Generate all documents in HTML format
+            st.info("🔄 Generating HTML documents...")
+            try:
+                html_documents = doc_generator.generate_all_documents()
+                
+                if not html_documents:
+                    st.error("❌ Failed to generate documents: No documents were generated")
+                    return
+                
+                st.success("✅ Documents generated successfully!")
+                
+                # Create temporary directory for files
+                temp_dir = Path(tempfile.mkdtemp())
+                
+                # Save and provide download links for HTML files
+                st.markdown("### 📄 HTML Documents")
+                html_files = []
+                for doc_name, html_content in html_documents.items():
+                    # Clean filename
+                    clean_name = "".join(c for c in doc_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                    clean_name = clean_name.replace(' ', '_')
+                    filename = f"{clean_name}.html"
+                    file_path = temp_dir / filename
+                    
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(html_content)
+                    html_files.append(file_path)
+                    provide_download_link(str(file_path), filename, f"html_download_{len(html_files)}")
+                
+                st.success("🎉 HTML documents are ready for download!")
+                
+            except Exception as e:
+                st.error(f"❌ Error generating documents: {str(e)}")
+                logger.error(f"Document generation error: {traceback.format_exc()}")
                 return
-            
-            st.success("✅ All document formats generated successfully!")
-            
-            # Create temporary directory for files
-            temp_dir = Path(tempfile.mkdtemp())
-            
-            # Save and provide download links for HTML files
-            st.markdown("### 📄 HTML Documents")
-            html_files = []
-            for doc_name, html_content in result['html_documents'].items():
-                # Clean filename
-                clean_name = "".join(c for c in doc_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-                clean_name = clean_name.replace(' ', '_')
-                filename = f"{clean_name}.html"
-                file_path = temp_dir / filename
                 
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(html_content)
-                html_files.append(file_path)
-                
-                provide_download_link(str(file_path), filename, f"html_download_{len(html_files)}")
-            
-            # Save and provide download links for PDF files
-            st.markdown("### 🖨️ PDF Documents")
-            pdf_files = []
-            for doc_name, pdf_content in result['pdf_documents'].items():
-                filename = doc_name
-                file_path = temp_dir / filename
-                
-                with open(file_path, 'wb') as f:
-                    f.write(pdf_content)
-                pdf_files.append(file_path)
-                
-                provide_download_link(str(file_path), filename, f"pdf_download_{len(pdf_files)}")
-            
-            # Save and provide download links for DOC files
-            st.markdown("### 📝 DOC Documents")
-            doc_files = []
-            for doc_name, doc_content in result['doc_documents'].items():
-                filename = doc_name
-                file_path = temp_dir / filename
-                
-                with open(file_path, 'wb') as f:
-                    f.write(doc_content)
-                doc_files.append(file_path)
-                
-                provide_download_link(str(file_path), filename, f"doc_download_{len(doc_files)}")
-            
-            # Provide download link for merged PDF if available
-            if result['merged_pdf']:
-                merged_file = temp_dir / "Merged_Documents.pdf"
-                with open(merged_file, 'wb') as f:
-                    f.write(result['merged_pdf'])
-                st.markdown("### 📁 Merged Documents")
-                provide_download_link(str(merged_file), "Merged_Documents.pdf", "merged_download")
-            
-            # Provide download link for ZIP package
-            if result['zip_package']:
-                zip_file = temp_dir / "All_Documents.zip"
-                with open(zip_file, 'wb') as f:
-                    f.write(result['zip_package'])
-                st.markdown("### 📦 Complete Package")
-                st.info("📥 Download a ZIP file containing all formats (HTML, PDF, DOC) for all documents")
-                provide_download_link(str(zip_file), "All_Documents.zip", "zip_download")
-                
-            st.success("🎉 All documents are ready for download!")
-            
     except Exception as e:
-        st.error(f"❌ Error generating all formats: {str(e)}")
-        logger.error(f"All formats generation error: {traceback.format_exc()}")
+        st.error(f"❌ Error in document generation process: {str(e)}")
+        logger.error(f"Document generation process error: {traceback.format_exc()}")
 
 def show_online_mode():
     """Handle online entry mode with step-by-step workflow"""
@@ -1973,8 +1941,8 @@ def generate_documents_online_mode():
             # st.write(f"- Bill quantity items: {len(bill_quantity_df)}")
             # st.write(f"- Extra items: {len(extra_items_df)}")
             
-            # Initialize EnhancedDocumentGenerator for robust HTML→PDF
-            doc_generator = EnhancedDocumentGenerator(online_data)
+            # Initialize DocumentGenerator for robust HTML→PDF
+            doc_generator = DocumentGenerator(online_data)
 
             # Generate HTML documents
             html_documents = doc_generator.generate_all_documents()
@@ -1983,95 +1951,69 @@ def generate_documents_online_mode():
                 st.success(f"✅ Generated {len(html_documents)} HTML documents!")
                 
                 # Show a preview of one document
-                # first_doc_name = list(html_documents.keys())[0]
-                # first_doc_content = html_documents[first_doc_name]
-                # st.write(f"Debug: First document preview ({first_doc_name[:50]}...):")
-                # st.write(f"  Length: {len(first_doc_content)} characters")
-                
-                # Convert HTML to PDF
-                with st.spinner("Converting to PDF..."):
-                    try:
-                        pdf_documents = doc_generator.create_pdf_documents(html_documents)
+                generated_files = []  # Initialize the variable
+                try:
+                    temp_dir = tempfile.mkdtemp()
+                    
+                    # Save HTML files
+                    for doc_name, html_content in html_documents.items():
+                        # Clean filename
+                        clean_name = "".join(c for c in doc_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                        clean_name = clean_name.replace(' ', '_')
+                        filename = f"{clean_name}.html"
+                        file_path = os.path.join(temp_dir, filename)
                         
-                        if pdf_documents:
-                            st.success(f"✅ Successfully created {len(pdf_documents)} PDF documents!")
-                            
-                            # Save PDF files to temporary directory and collect file paths
-                            generated_files = []
-                            temp_dir = tempfile.mkdtemp()
-                            
-                            for filename, pdf_bytes in pdf_documents.items():
-                                file_path = os.path.join(temp_dir, filename)
-                                with open(file_path, 'wb') as f:
-                                    f.write(pdf_bytes)
-                                generated_files.append(file_path)
-                            
-                            # Store generated files
-                            st.session_state.generated_documents = generated_files
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(html_content)
+                            generated_files.append(file_path)
+                        
+                        # Store generated files
+                        st.session_state.generated_documents = generated_files
+                        
+                        # Show download links for HTML files
+                        st.markdown("### 📥 Download Documents")
+                        for i, file_path in enumerate(generated_files):
+                            file_name = Path(file_path).name
+                            provide_download_link(file_path, file_name, f"online_download_{i}")
+                        
+                        st.info("ℹ️ PDF generation is currently not available. Please download the HTML files above.")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error preparing documents: {str(e)}")
+                    import traceback
+                    logger.error(f"Document preparation error: {traceback.format_exc()}")
+                
+                # Success message with summary
+                # FIXED to prevent 'str' object has no attribute 'get' error
+                total_bill_amount = 0
+                for item in bill_quantity_items:
+                    amount_value = item.get('Amount', 0)
+                    try:
+                        total_bill_amount += float(amount_value or 0)
+                    except (ValueError, TypeError):
+                        pass
+                
+                total_extra_amount = 0
+                for item in extra_items_norm:
+                    # Safely get amount value
+                    amount_value = item.get('Amount')
+                    if amount_value is None:
+                        amount_value = item.get('amount', 0)
+                    try:
+                        total_extra_amount += float(amount_value or 0)
+                    except (ValueError, TypeError):
+                        pass
+                
+                total_amount = total_bill_amount + total_extra_amount
 
-                            # Show individual download links
-                            st.markdown("### 📥 Individual Downloads")
-                            for i, file_path in enumerate(generated_files):
-                                file_name = Path(file_path).name
-                                provide_download_link(file_path, file_name, f"online_download_{i}")
-                            
-                            # Merge PDFs if multiple files
-                            if len(generated_files) > 1:
-                                try:
-                                    merger = PDFMerger()
-                                    merged_pdf_bytes = merger.merge_pdfs(pdf_documents)
-                                    if merged_pdf_bytes:
-                                        # Save merged PDF to temporary file
-                                        merged_file_path = os.path.join(temp_dir, "Merged_Bill_Documents.pdf")
-                                        with open(merged_file_path, 'wb') as f:
-                                            f.write(merged_pdf_bytes)
-                                        st.success("📄 Documents merged successfully!")
-                                        provide_download_link(merged_file_path, "Merged_Bill_Documents.pdf", "online_merged")
-                                except Exception as e:
-                                    st.warning(f"Could not merge PDFs: {str(e)}")
-                                    st.info("Individual downloads are still available above.")
-                            else:
-                                if generated_files:
-                                    provide_download_link(generated_files[0], "Bill_Document.pdf", "online_single")
+                st.balloons()
+                st.success(f"""
+                🎉 **Documents Generated Successfully!**
 
-                            # Success message with summary
-                            # FIXED to prevent 'str' object has no attribute 'get' error
-                            total_bill_amount = 0
-                            for item in bill_quantity_items:
-                                amount_value = item.get('Amount', 0)
-                                try:
-                                    total_bill_amount += float(amount_value or 0)
-                                except (ValueError, TypeError):
-                                    pass
-                            
-                            total_extra_amount = 0
-                            for item in extra_items_norm:
-                                # Safely get amount value
-                                amount_value = item.get('Amount')
-                                if amount_value is None:
-                                    amount_value = item.get('amount', 0)
-                                try:
-                                    total_extra_amount += float(amount_value or 0)
-                                except (ValueError, TypeError):
-                                    pass
-                            
-                            total_amount = total_bill_amount + total_extra_amount
-
-                            st.balloons()
-                            st.success(f"""
-                            🎉 **Documents Generated Successfully!**
-
-                            - **Total Items:** {len(bill_quantity_items) + len(st.session_state.extra_items or [])}
-                            - **Total Amount:** ₹{total_amount:,.2f}
-                            - **Generated Files:** {len(generated_files)}
-                            """)
-                        else:
-                            st.error("❌ Failed to create PDF documents")
-                            st.write("Debug: pdf_documents is empty or None")
-                    except Exception as pdf_error:
-                        st.error(f"❌ Error during PDF creation: {str(pdf_error)}")
-                        import traceback
-                        st.error(f"Traceback: {traceback.format_exc()}")
+                - **Total Items:** {len(bill_quantity_items) + len(st.session_state.extra_items or [])}
+                - **Total Amount:** ₹{total_amount:,.2f}
+                - **Generated Files:** {len(generated_files)}
+                """)
             else:
                 st.error("❌ Failed to generate documents")
                 st.write("Debug: html_documents is empty or None")

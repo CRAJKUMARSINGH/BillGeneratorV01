@@ -1,0 +1,14 @@
+Excel File Processing Results
+============================
+File: FirstFINALnoExtra.xlsx
+Processed at: 2025-10-16 09:46:04
+Success: True
+
+Sheet Names: Title, Work Order, Bill Quantity, Extra Items
+
+Sheet Details:
+--------------
+  Title: 19 rows × 2 columns
+  Work Order: 39 rows × 7 columns
+  Bill Quantity: 39 rows × 7 columns
+  Extra Items: 9 rows × 8 columns
