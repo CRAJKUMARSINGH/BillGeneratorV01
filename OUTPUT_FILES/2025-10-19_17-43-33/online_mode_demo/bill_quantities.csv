@@ -1,0 +1,6 @@
+item_no,description,unit,rate,work_order_qty,bill_qty,amount
+01,Excavation in ordinary soil,CuM,1200.0,50.0,59.1,70920.0
+02,Brickwork in cement mortar 1:6,CuM,8500.0,25.5,7.22,61370.0
+03,RCC M20 for foundation,CuM,9200.0,30.0,15.73,144716.0
+07,Waterproofing treatment,SqM,85.0,150.0,53.96,4586.6
+08,Painting with emulsion paint,SqM,45.0,800.0,537.13,24170.85

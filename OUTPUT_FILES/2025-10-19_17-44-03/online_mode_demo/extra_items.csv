@@ -1,0 +1,11 @@
+item_no,description,unit,rate,bill_qty,amount
+EX01,Extra Work Item 1 - Additional Services,CuM,224.17,6.71,1504.1807
+EX02,Extra Work Item 2 - Additional Services,Mtr,376.16,2.87,1079.5792000000001
+EX03,Extra Work Item 3 - Additional Services,Mtr,1166.36,7.82,9120.9352
+EX04,Extra Work Item 4 - Additional Services,SqM,640.29,11.65,7459.3785
+EX05,Extra Work Item 5 - Additional Services,Mtr,1621.55,19.17,31085.113500000003
+EX06,Extra Work Item 6 - Additional Services,CuM,874.16,1.57,1372.4312
+EX07,Extra Work Item 7 - Additional Services,CuM,1245.18,7.09,8828.3262
+EX08,Extra Work Item 8 - Additional Services,SqM,1878.44,5.3,9955.732
+EX09,Extra Work Item 9 - Additional Services,Mtr,135.93,18.78,2552.7654
+EX10,Extra Work Item 10 - Additional Services,SqM,489.27,9.55,4672.5285
