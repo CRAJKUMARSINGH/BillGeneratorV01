@@ -11,7 +11,6 @@ from jinja2 import Environment, FileSystemLoader
 from utils.template_renderer import TemplateRenderer
 import os
 import asyncio
-from playwright.async_api import async_playwright
 from utils.zip_packager import ZipPackager
 import logging
 
@@ -360,6 +359,8 @@ class EnhancedDocumentGenerator:
     async def _generate_pdf_playwright(self, html_content: str, output_path: str) -> bool:
         """Generate PDF using Playwright with memory optimization"""
         try:
+            # Lazy import to avoid hard dependency at module import time
+            from playwright.async_api import async_playwright
             async with async_playwright() as p:
                 browser = await p.chromium.launch()
                 page = await browser.new_page()
@@ -388,6 +389,10 @@ class EnhancedDocumentGenerator:
                 # Force garbage collection after PDF generation
                 gc.collect()
                 return True
+        except ImportError:
+            # Playwright not installed in the environment
+            logger.error("Playwright not installed; skipping Playwright PDF generation")
+            return False
         except Exception as e:
             logger.error(f"Playwright PDF generation error: {str(e)}")
             return False
