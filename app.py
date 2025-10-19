@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, date
@@ -1392,7 +1391,7 @@ def show_bill_quantity_entry():
     else:
         st.info("💡 Enter quantities for work items above to see the bill summary.")
 
-    # Summary section
+    # Summary section (deduplicated and aligned with processed data)
     st.markdown("### 📊 Bill Summary")
     
     col1, col2, col3 = st.columns(3)
@@ -1543,11 +1542,11 @@ def show_document_generation():
 
     # Summary metrics
     col1, col2, col3, col4 = st.columns(4)
-
+    
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">{len([item for item in st.session_state.bill_quantities.values() if isinstance(item, dict) and item.get('quantity', 0) > 0])}</div>
+            <div class="metric-value">{len(processed_items)}</div>
             <div class="metric-label">Bill Items</div>
         </div>
         """, unsafe_allow_html=True)

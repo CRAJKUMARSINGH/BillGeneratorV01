@@ -84,6 +84,14 @@ class FirstPageGenerator:
             'font_size': 9,
             'border': 1
         })
+        
+        # Wrap text formatting for long descriptions
+        self.wrap_text_format = workbook.add_format({
+            'font_name': 'Calibri',
+            'font_size': 9,
+            'text_wrap': True,
+            'valign': 'top'
+        })
     
     def _copy_header_data(self, worksheet, title_data):
         """Copy header data from title information"""
@@ -233,5 +241,4 @@ class FirstPageGenerator:
             worksheet.set_column(col, col, width)
         
         # Apply text wrapping to description column (E)
-        wrap_format = {'text_wrap': True, 'valign': 'top'}
-        worksheet.set_column(4, 4, 35, None, wrap_format)  # Column E
+        worksheet.set_column(4, 4, 35, self.wrap_text_format)  # Column E
