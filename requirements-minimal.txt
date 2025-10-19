@@ -1,0 +1,13 @@
+# Minimal requirements for Streamlit Cloud deployment
+streamlit==1.28.0
+pandas==2.0.0
+openpyxl==3.1.0
+xlsxwriter==3.1.0
+reportlab==4.0.0
+PyPDF2==3.0.0
+jinja2==3.1.0
+Pillow==10.0.0
+python-dateutil>=2.8.2
+requests==2.31.0
+beautifulsoup4==4.12.2
+plotly==5.15.0
