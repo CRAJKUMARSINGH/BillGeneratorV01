@@ -25,7 +25,8 @@ class EnhancedDocumentGenerator:
     
     def __init__(self, data: Dict[str, Any]):
         self.data = data
-        self.title_data = data.get('title_data', {})
+        # Normalize title data to canonical keys used by templates/reference app
+        self.title_data = self._normalize_title_data(data.get('title_data', {}))
         self.work_order_data = data.get('work_order_data', pd.DataFrame())
         self.bill_quantity_data = data.get('bill_quantity_data', pd.DataFrame())
         self.extra_items_data = data.get('extra_items_data', pd.DataFrame())
@@ -83,6 +84,43 @@ class EnhancedDocumentGenerator:
             if name in df.columns:
                 return name
         return None
+
+    def _normalize_title_data(self, title_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Map various input schema keys to canonical names expected by templates.
+        Preserves original keys, adds canonical aliases when missing.
+        """
+        if not isinstance(title_data, dict):
+            return {}
+        normalized = dict(title_data)
+
+        def alias(src_keys, dst_key):
+            for key in src_keys:
+                if key in normalized and dst_key not in normalized:
+                    normalized[dst_key] = normalized[key]
+                    break
+
+        # Common mappings
+        alias([
+            'Name of Work ;-', 'Name of Work :', 'Name of Work', 'Project Name'
+        ], 'Project Name')
+        alias(['Agreement No.', 'Contract/Agreement Number', 'Contract Number', 'Contract No'], 'Contract No')
+        alias(['Reference to work order or Agreement :', 'Work Order Reference', 'Work Order No', 'Work Order'], 'Work Order No')
+        alias(['Name of Contractor or supplier :', 'Contractor Name', 'Name of Contractor'], 'Contractor Name')
+
+        # Friendly keys used by some templates
+        alias(['Agreement No.', 'Contract No'], 'agreement_no')
+        alias(['Name of Work ;-', 'Project Name'], 'name_of_work')
+        alias(['Name of Contractor or supplier :', 'Contractor Name'], 'name_of_firm')
+
+        # Normalize premium percent if provided like '10%'
+        premium_val = normalized.get('TENDER PREMIUM %')
+        if isinstance(premium_val, str) and premium_val.strip().endswith('%'):
+            try:
+                normalized['TENDER PREMIUM %'] = float(premium_val.strip().rstrip('%'))
+            except ValueError:
+                pass
+
+        return normalized
     
     def _has_extra_items(self):
         """Check if there are any extra items"""
@@ -698,11 +736,16 @@ class EnhancedDocumentGenerator:
                         # Try multiple PDF generation methods
                         success = False
                         
-                        # Method 1: Try Playwright (most reliable)
+                        # Method 1: Try Playwright (most reliable) if explicitly enabled
                         try:
-                            success = asyncio.run(self._generate_pdf_async(html_content, str(temp_pdf_path)))
-                        except Exception as e:
-                            print(f"Playwright failed for {doc_name}: {str(e)}")
+                            enable_playwright = os.environ.get('ENABLE_PLAYWRIGHT_PDF', '0').lower() in ('1', 'true', 'yes')
+                        except Exception:
+                            enable_playwright = False
+                        if enable_playwright:
+                            try:
+                                success = asyncio.run(self._generate_pdf_async(html_content, str(temp_pdf_path)))
+                            except Exception as e:
+                                print(f"Playwright failed for {doc_name}: {str(e)}")
                         
                         # Method 2: Try ReportLab as fallback
                         if not success:
