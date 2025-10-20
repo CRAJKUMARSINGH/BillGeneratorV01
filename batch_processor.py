@@ -416,10 +416,10 @@ class StreamlitBatchInterface:
         """Show the batch processing interface in Streamlit"""
         st.markdown("### 📁 Batch Processing Interface")
         
-        # Input directory selection
+        # Input directory selection (default to lowercase 'input_files' used in repo)
         input_dir = st.text_input(
             "Input Directory Path", 
-            value="INPUT_FILES",
+            value="input_files",
             help="Directory containing Excel files to process"
         )
         

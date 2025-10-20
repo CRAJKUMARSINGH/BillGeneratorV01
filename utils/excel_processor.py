@@ -125,7 +125,7 @@ class ExcelProcessor:
         
         raise Exception("Failed to read Excel file after multiple attempts. Please check file permissions and ensure it's not open in another program.")
     
-    def process_excel(self) -> Dict[str, Any]:
+    def process_excel(self, allow_missing_bill_quantity: bool = False) -> Dict[str, Any]:
         """
         Process uploaded Excel file and extract data from all required sheets
         
@@ -166,8 +166,12 @@ class ExcelProcessor:
                 data['bill_quantity_data'] = self._process_bill_quantity_sheet(excel_data)
                 print(f"Bill Quantity data extracted: {len(data['bill_quantity_data'])} rows")
             else:
-                print("ERROR: Bill Quantity sheet not found - this is required!")
-                raise Exception("Required 'Bill Quantity' sheet not found in Excel file")
+                if allow_missing_bill_quantity:
+                    print("INFO: Bill Quantity sheet not found - allowed for partial processing")
+                    data['bill_quantity_data'] = pd.DataFrame()
+                else:
+                    print("ERROR: Bill Quantity sheet not found - this is required!")
+                    raise Exception("Required 'Bill Quantity' sheet not found in Excel file")
             
             # Process Extra Items sheet (optional)
             if 'Extra Items' in excel_data.sheet_names:
@@ -179,8 +183,16 @@ class ExcelProcessor:
                 data['extra_items_data'] = pd.DataFrame()
             
             # Validate that we have essential data
-            if (DataFrameSafetyUtils.is_valid_dataframe(data.get('work_order_data')) and 
-                DataFrameSafetyUtils.is_valid_dataframe(data.get('bill_quantity_data'))):
+            if allow_missing_bill_quantity:
+                # Only require work order data when partial processing
+                if DataFrameSafetyUtils.is_valid_dataframe(data.get('work_order_data')):
+                    print("SUCCESS: Work Order data extracted successfully (partial mode)")
+                    gc.collect()
+                    return data
+                else:
+                    raise Exception("No valid Work Order data found. Please check your Excel file format.")
+            elif (DataFrameSafetyUtils.is_valid_dataframe(data.get('work_order_data')) and 
+                  DataFrameSafetyUtils.is_valid_dataframe(data.get('bill_quantity_data'))):
                 print("SUCCESS: All required data extracted successfully")
                 
                 # Force garbage collection after processing

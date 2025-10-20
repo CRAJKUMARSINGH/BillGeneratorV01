@@ -622,8 +622,8 @@ def show_excel_mode():
                 # Process Excel file using existing ExcelProcessor
                 processor = ExcelProcessor(uploaded_file)
 
-                # Process the Excel file directly
-                result = processor.process_excel()
+                # Process the Excel file directly (allow missing Bill Quantity for newer inputs)
+                result = processor.process_excel(allow_missing_bill_quantity=True)
 
                 if result and isinstance(result, dict):
                     st.success("✅ Excel file processed successfully!")
