@@ -13,7 +13,6 @@ import concurrent.futures
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 import pandas as pd
-import streamlit as st
 from datetime import datetime
 import tempfile
 import shutil
@@ -405,141 +404,54 @@ class HighPerformanceBatchProcessor:
         
         return "\n".join(report)
 
-class StreamlitBatchInterface:
-    """Streamlit interface for batch processing"""
-    
-    def __init__(self):
-        self.processor = None
-        self.results = []
-    
-    def show_batch_interface(self):
-        """Show the batch processing interface in Streamlit"""
-        st.markdown("### 📁 Batch Processing Interface")
-        
-        # Input directory selection (default to lowercase 'input_files' used in repo)
-        input_dir = st.text_input(
-            "Input Directory Path", 
-            value="input_files",
-            help="Directory containing Excel files to process"
-        )
-        
-        # Output directory selection
-        output_dir = st.text_input(
-            "Output Directory Path",
-            value="OUTPUT_FILES",
-            help="Directory where processed files will be saved"
-        )
-        
-        # Processing options
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            max_workers = st.slider(
-                "Max Concurrent Files",
-                min_value=1,
-                max_value=10,
-                value=3,
-                help="Maximum number of files to process simultaneously"
-            )
-        
-        with col2:
-            enable_preview = st.checkbox(
-                "Enable Preview",
-                value=True,
-                help="Show preview of processed files"
-            )
-        
-        # Process button
-        if st.button("🚀 Start Batch Processing", type="primary"):
-            if input_dir and output_dir:
-                self._process_batch(input_dir, output_dir, max_workers, enable_preview)
-            else:
-                st.error("Please specify both input and output directories")
-    
-    def _process_batch(self, input_dir: str, output_dir: str, max_workers: int, enable_preview: bool):
-        """Process batch of files"""
-        try:
-            with st.spinner("Initializing batch processor..."):
-                self.processor = HighPerformanceBatchProcessor(input_dir, output_dir)
-                self.processor.max_concurrent_files = max_workers
-            
-            # Discover files
-            with st.spinner("Discovering input files..."):
-                files = self.processor.discover_input_files()
-                
-                if not files:
-                    st.warning("No Excel files found in the input directory")
-                    return
-                
-                st.info(f"Found {len(files)} files to process")
-            
-            # Create progress bar
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Process files
-            results = []
-            for i, file_path in enumerate(files):
-                # Update progress
-                progress = (i + 1) / len(files)
-                progress_bar.progress(progress)
-                status_text.text(f"Processing {file_path.name}... ({i+1}/{len(files)})")
-                
-                # Process file
-                result = self.processor.process_single_file(file_path)
-                results.append(result)
-                
-                # Show preview if enabled
-                if enable_preview:
-                    self._show_file_preview(result)
-            
-            # Show results
-            self._show_batch_results(results)
-            
-        except Exception as e:
-            st.error(f"Batch processing failed: {str(e)}")
-            logger.error(f"Batch processing error: {str(e)}")
-    
-    def _show_file_preview(self, result: Dict[str, Any]):
-        """Show preview of processed file"""
-        if result['success']:
-            st.success(f"✅ {result['file_name']} processed successfully")
-        else:
-            st.error(f"❌ {result['file_name']} failed: {result['error']}")
-    
-    def _show_batch_results(self, results: List[Dict[str, Any]]):
-        """Show batch processing results"""
-        st.markdown("### 📊 Batch Processing Results")
-        
-        # Summary statistics
-        total_files = len(results)
-        successful = sum(1 for r in results if r['success'])
-        failed = total_files - successful
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Files", total_files)
-        
-        with col2:
-            st.metric("Successful", successful, f"+{successful}")
-        
-        with col3:
-            st.metric("Failed", failed, f"-{failed}" if failed > 0 else None)
-        
-        # Detailed results
-        if results:
-            st.markdown("### 📋 Detailed Results")
-            
-            result_data = []
-            for result in results:
-                result_data.append({
-                    "File": result['file_name'],
-                    "Status": "✅ Success" if result['success'] else "❌ Failed",
-                    "Processing Time": f"{result['processing_time']:.2f}s",
-                    "Output Size": f"{result['output_size']:,} bytes" if result['output_size'] > 0 else "N/A",
-                    "Error": result['error'] if result['error'] else "None"
-                })
-            
-            results_df = pd.DataFrame(result_data)
-            st.dataframe(results_df, hide_index=True, use_container_width=True)
+class CLIBatchInterface:
+    """Command-line interface for batch processing (replaces Streamlit UI)"""
+
+    def __init__(self) -> None:
+        self.processor: Optional[HighPerformanceBatchProcessor] = None
+        self.results: List[Dict[str, Any]] = []
+
+    def run(self, input_dir: str = "input_files", output_dir: str = "OUTPUT_FILES", max_workers: int = 3) -> Dict[str, Any]:
+        self.processor = HighPerformanceBatchProcessor(input_dir, output_dir)
+        self.processor.max_concurrent_files = max_workers
+        files = self.processor.discover_input_files()
+        if not files:
+            return {
+                'success': False,
+                'message': 'No Excel files found in input directory',
+                'stats': []
+            }
+        results: List[Dict[str, Any]] = []
+        for i, file_path in enumerate(files, 1):
+            logger.info(f"Processing {file_path.name}... ({i}/{len(files)})")
+            result = self.processor.process_single_file(file_path)
+            results.append(result)
+        summary = self.processor.generate_batch_report({
+            'summary': self.processor.processing_stats
+        })
+        logger.info("\n" + summary)
+        return {
+            'success': True,
+            'message': f'Processed {len([r for r in results if r.get("success")])} of {len(results)} files',
+            'stats': results,
+            'summary_text': summary,
+        }
+
+def main_cli():
+    """Entrypoint for CLI usage"""
+    import argparse
+    parser = argparse.ArgumentParser(description="Batch process Excel files into billing PDFs")
+    parser.add_argument("--input", default="input_files", help="Input directory containing Excel files")
+    parser.add_argument("--output", default="OUTPUT_FILES", help="Output directory for generated files")
+    parser.add_argument("--workers", type=int, default=3, help="Maximum concurrent files to process")
+    args = parser.parse_args()
+
+    interface = CLIBatchInterface()
+    result = interface.run(args.input, args.output, args.workers)
+    if not result.get('success'):
+        logger.error(result.get('message', 'Batch processing failed'))
+        raise SystemExit(1)
+    print(result.get('summary_text', ''))
+
+if __name__ == "__main__":
+    main_cli()

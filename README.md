@@ -1,6 +1,6 @@
 # Bill Generator - Professional Infrastructure Billing System
 
-A comprehensive Streamlit application for generating professional infrastructure billing documents with support for multiple formats and deployment options.
+CLI-based tool for generating professional infrastructure billing documents with support for multiple formats.
 
 ## Features
 
@@ -9,29 +9,14 @@ A comprehensive Streamlit application for generating professional infrastructure
 - **Batch Processing**: Handle multiple files at once
 - **Cloud Deployment Ready**: Configured for Streamlit Cloud and other platforms
 
-## Deployment
-
-### Streamlit Cloud Deployment
-
-1. Fork this repository
-2. In Streamlit Cloud, set the main file to `deployable_app.py`
-3. Use Python version from `runtime.txt` (3.11.9)
-4. Dependencies are in `requirements.txt` (minimal, Cloud-friendly)
-5. Optional: set `ENABLE_PLAYWRIGHT_PDF=1` if your workspace supports Playwright and its browsers; otherwise PDFs will be generated via pure-Python engines
-6. Deploy
-
-### Local Deployment
+## Usage (CLI)
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-streamlit run deployable_app.py
-```
 
-To run the full feature app with online entry mode UI:
-
-```bash
-streamlit run app.py
+# Batch process all Excel files in input_files and write outputs to OUTPUT_FILES
+python batch_processor.py --input input_files --output OUTPUT_FILES --workers 3
 ```
 
 ## Requirements
@@ -53,18 +38,16 @@ streamlit run app.py
 
 ## File Structure
 
-- `deployable_app.py`: Main Streamlit application for deployment
-- `app.py`: Full-featured application with all modes
-- `requirements-deploy.txt`: Minimal dependencies for cloud deployment
-- `requirements.txt`: Full dependencies for local development
+- `batch_processor.py`: CLI batch processor to convert Excel inputs to PDFs
+- `requirements.txt`: Dependencies for local development
 
 ## License
 
 MIT License
 
-# Enhanced Bill Generator
+---
 
-An advanced Streamlit application for infrastructure billing with dual-mode functionality: Excel upload and online entry.
+This project has been simplified to a command-line workflow; Streamlit UI and deployment artifacts have been removed.
 
 ## 🚀 New Features
 

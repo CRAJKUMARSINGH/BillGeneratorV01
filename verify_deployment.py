@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Verification script for the deployable Bill Generator application
+Verification script for the Bill Generator CLI application
 """
 
 import sys
@@ -35,18 +35,15 @@ def check_import(module_name, description):
 
 def main():
     """Main verification function"""
-    print("Bill Generator Deployment Verification")
+    print("Bill Generator CLI Verification")
     print("=" * 40)
     
     # Check core files
     print("\n📁 Checking core files...")
     files_check = [
-        ("deployable_app.py", "Deployable Streamlit App"),
-        ("requirements-deploy.txt", "Deployment Requirements"),
+        ("batch_processor.py", "Batch Processor (CLI)"),
         ("fixed_document_generator.py", "Fixed Document Generator"),
-        ("process_with_fixed_generator.py", "Process Script"),
-        ("DEPLOYMENT_INSTRUCTIONS.md", "Deployment Instructions"),
-        ("TROUBLESHOOTING.md", "Troubleshooting Guide")
+        ("requirements.txt", "Requirements File"),
     ]
     
     files_ok = True
@@ -79,7 +76,6 @@ def main():
     # Check imports
     print("\n📦 Checking imports...")
     imports_check = [
-        ("streamlit", "Streamlit Framework"),
         ("pandas", "Pandas Library"),
         ("openpyxl", "OpenPyXL Library"),
         ("reportlab", "ReportLab Library"),
@@ -116,10 +112,10 @@ def main():
     
     if overall_ok:
         print("\n🎉 ALL CHECKS PASSED!")
-        print("The deployable Bill Generator is ready for deployment.")
-        print("\nTo deploy:")
-        print("1. Install dependencies: pip install -r requirements-deploy.txt")
-        print("2. Run the app: streamlit run deployable_app.py")
+        print("The Bill Generator CLI is ready.")
+        print("\nTo run:")
+        print("1. pip install -r requirements.txt")
+        print("2. python batch_processor.py --input input_files --output OUTPUT_FILES")
         return True
     else:
         print("\n❌ SOME CHECKS FAILED!")
