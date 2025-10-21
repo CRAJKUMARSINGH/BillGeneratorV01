@@ -56,6 +56,7 @@ class TemplateRenderer:
         
         # Prepare items data
         items = []
+        extra_items_sum = 0.0
         
         # Process work order items
         if isinstance(work_order_data, pd.DataFrame):
@@ -140,6 +141,8 @@ class TemplateRenderer:
                     }
                 
                 items.append(item_data)
+                # accumulate extra items base amount
+                extra_items_sum += amount
         
         # Calculate totals
         total_amount = 0
@@ -154,6 +157,8 @@ class TemplateRenderer:
         premium_percent = self._get_premium_fraction(title_data)
         premium_amount = total_amount * premium_percent
         payable_amount = total_amount + premium_amount
+        # Include extra items sum including premium for display row, if any
+        extra_items_with_premium = extra_items_sum * (1.0 + premium_percent) if extra_items_sum > 0 else 0.0
         
         return {
             'data': {
@@ -165,7 +170,8 @@ class TemplateRenderer:
                         'percent': premium_percent,
                         'amount': f"{premium_amount:.2f}"
                     },
-                    'payable': f"{payable_amount:.2f}"
+                    'payable': f"{payable_amount:.2f}",
+                    'extra_items_sum': extra_items_with_premium
                 }
             }
         }
