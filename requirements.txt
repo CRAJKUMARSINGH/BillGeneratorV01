@@ -1,10 +1,5 @@
 # Minimal requirements for Streamlit Cloud deployment 
-openpyxl==3.1.0
-xlsxwriter==3.1.0
-reportlab==4.0.0
-PyPDF2==3.0.0
-jinja2==3.1.0
-Pillow==10.0.0
+
 python-dateutil>=2.8.2
 requests==2.31.0
 beautifulsoup4==4.12.2
@@ -15,10 +10,30 @@ pygments==2.19.2
 mdurl==0.1.2
 markdown-it-py==4.0.0
 rich==13.7.1
-streamlit==1.38.0
+
 pycairo==1.26.1
-weasyprint==61.3
+
 numpy==1.26.4
 pandas==2.2.2
+
+# Force binary wheels only - NO COMPILATION
+--only-binary=all
+--no-cache-dir
+
+# Core Streamlit
+streamlit==1.38.0
+
+# Excel/PDF (working versions)
+openpyxl==3.1.5
+xlsxwriter==3.2.0
+reportlab==4.2.2
+PyPDF2==3.0.1
+
+# Templates
+jinja2==3.1.4
+
+# Images - FIXED VERSION (has wheel for Python 3.13)
+Pillow==10.4.0
+
 
 
