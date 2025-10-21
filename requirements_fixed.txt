@@ -1,0 +1,25 @@
+# PDF generation (multiple methods for reliability)
+reportlab>=4.0.0
+fpdf2>=2.7.0
+weasyprint>=60.0
+
+# HTML parsing and processing
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Image processing
+Pillow>=10.0.0
+
+# Date and time handling
+python-dateutil>=2.8.2
+
+# Additional utilities
+jinja2>=3.1.0
+requests>=2.31.0
+
+# For ZIP file creation
+# (zipfile is built-in to Python)
+
+# Optional dependencies for enhanced features
+matplotlib>=3.7.0  # For charts if needed
+plotly>=5.15.0     # For interactive charts
