@@ -150,8 +150,8 @@ class TemplateRenderer:
                 if rate != 0:  # Only count non-zero rate items
                     total_amount += quantity * rate
         
-        # Calculate premium (typically 10%)
-        premium_percent = 0.10
+        # Calculate premium using title data if available (fallback to 10%)
+        premium_percent = self._get_premium_fraction(title_data)
         premium_amount = total_amount * premium_percent
         payable_amount = total_amount + premium_amount
         
@@ -308,8 +308,8 @@ class TemplateRenderer:
             overall_excess = max(0, executed_total - work_order_total)
             overall_saving = max(0, work_order_total - executed_total)
             
-            # Calculate tender premium (typically 10%)
-            premium_percent = 0.10
+            # Calculate tender premium using title data if available
+            premium_percent = self._get_premium_fraction(title_data)
             tender_premium_f = work_order_total * premium_percent
             tender_premium_h = executed_total * premium_percent
             tender_premium_j = overall_excess * premium_percent if overall_excess > 0 else 0
@@ -486,8 +486,8 @@ class TemplateRenderer:
                     rate = self._safe_float(row.get('Rate', 0))
                     total_amount += quantity * rate
             
-            # Calculate premium (typically 10%)
-            premium_percent = 0.10
+            # Calculate premium using title data if available
+            premium_percent = self._get_premium_fraction(title_data)
             premium_amount = total_amount * premium_percent
             payable_amount = total_amount + premium_amount
             
@@ -539,3 +539,37 @@ class TemplateRenderer:
         except Exception as e:
             print(f"Failed to render certificate_iii.html template: {e}")
             raise
+
+    def _get_premium_fraction(self, title_data: Dict[str, Any]) -> float:
+        """Return tender premium as fraction (e.g., 0.10 for 10%).
+        Accepts values like 10, 10.0, "10", or "10%" in title_data['TENDER PREMIUM %'].
+        Defaults to 0.10 when missing or invalid.
+        """
+        try:
+            raw = None
+            if isinstance(title_data, dict):
+                # Try common keys
+                for k in (
+                    'TENDER PREMIUM %',
+                    'Tender Premium Percentage',
+                    'Tender Premium',
+                    'tender_premium_percent',
+                ):
+                    if k in title_data and title_data[k] not in (None, ''):
+                        raw = title_data[k]
+                        break
+            if raw is None:
+                return 0.10
+            if isinstance(raw, str):
+                s = raw.strip()
+                if s.endswith('%'):
+                    s = s[:-1].strip()
+                val = float(s)
+            elif isinstance(raw, (int, float)):
+                val = float(raw)
+            else:
+                return 0.10
+            # If given as whole percent (e.g., 10), convert to fraction
+            return val / 100.0 if val > 1 else val
+        except Exception:
+            return 0.10

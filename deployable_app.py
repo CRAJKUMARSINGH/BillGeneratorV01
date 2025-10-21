@@ -280,7 +280,14 @@ class SimpleDocumentGenerator:
     def _generate_first_page(self):
         """Generate first page summary"""
         current_date = datetime.now().strftime('%d/%m/%Y')
-        project_name = self.title_data.get('Project Name', 'Project Name')
+        # Normalize common title fields for display
+        project_name = (
+            self.title_data.get('Project Name')
+            or self.title_data.get('Name of Work ;-')
+            or self.title_data.get('Name of Work :')
+            or self.title_data.get('Name of Work')
+            or 'Project Name'
+        )
         
         html_content = f"""
         <!DOCTYPE html>
@@ -340,7 +347,15 @@ class SimpleDocumentGenerator:
             """
         
         # Calculate premium and totals
-        premium_percent = self._safe_float(self.title_data.get('TENDER PREMIUM %', 0))
+        # Accept premium provided as 10 or "10%"
+        raw_premium = self.title_data.get('TENDER PREMIUM %', 0)
+        if isinstance(raw_premium, str) and raw_premium.strip().endswith('%'):
+            try:
+                premium_percent = self._safe_float(raw_premium.strip().rstrip('%'))
+            except Exception:
+                premium_percent = 0.0
+        else:
+            premium_percent = self._safe_float(raw_premium)
         premium_amount = total_amount * (premium_percent / 100)
         grand_total = total_amount + premium_amount
         
@@ -369,7 +384,14 @@ class SimpleDocumentGenerator:
             rate = self._safe_float(row.get('Rate', 0))
             total_amount += quantity * rate
         
-        premium_percent = self._safe_float(self.title_data.get('TENDER PREMIUM %', 0))
+        raw_premium = self.title_data.get('TENDER PREMIUM %', 0)
+        if isinstance(raw_premium, str) and raw_premium.strip().endswith('%'):
+            try:
+                premium_percent = self._safe_float(raw_premium.strip().rstrip('%'))
+            except Exception:
+                premium_percent = 0.0
+        else:
+            premium_percent = self._safe_float(raw_premium)
         premium_amount = total_amount * (premium_percent / 100)
         gross_total = total_amount + premium_amount
         
