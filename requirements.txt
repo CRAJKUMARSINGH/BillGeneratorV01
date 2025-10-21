@@ -11,9 +11,14 @@ python-dateutil>=2.8.2
 requests==2.31.0
 beautifulsoup4==4.12.2
 plotly==5.15.0
+weasyprint
+reportlab
 
 # Pin common transitive deps to avoid conflicts in Streamlit Cloud
 pygments==2.19.2
 mdurl==0.1.2
 markdown-it-py==4.0.0
 rich==13.7.1
+streamlit
+pycairo==1.26.1
+
