@@ -43,10 +43,8 @@ def main():
     files_check = [
         ("deployable_app.py", "Deployable Streamlit App"),
         ("requirements-deploy.txt", "Deployment Requirements"),
-        ("fixed_document_generator.py", "Fixed Document Generator"),
-        ("process_with_fixed_generator.py", "Process Script"),
-        ("DEPLOYMENT_INSTRUCTIONS.md", "Deployment Instructions"),
-        ("TROUBLESHOOTING.md", "Troubleshooting Guide")
+        ("enhanced_document_generator_fixed.py", "Enhanced Document Generator"),
+        ("Procfile", "Procfile for Streamlit Cloud"),
     ]
     
     files_ok = True
@@ -74,7 +72,8 @@ def main():
     
     # Check utils files
     print("\n⚙️  Checking utility files...")
-    utils_ok = check_file_exists("utils/excel_processor.py", "Excel Processor")
+    utils_ok = check_file_exists("utils/excel_processor.py", "Excel Processor") and \
+               check_file_exists("utils/template_renderer.py", "Template Renderer")
     
     # Check imports
     print("\n📦 Checking imports...")
@@ -95,7 +94,7 @@ def main():
     print("\n🔧 Checking local imports...")
     local_imports = [
         ("utils.excel_processor", "Excel Processor Module"),
-        ("fixed_document_generator", "Fixed Document Generator Module")
+        ("enhanced_document_generator_fixed", "Enhanced Document Generator Module")
     ]
     
     local_imports_ok = True
