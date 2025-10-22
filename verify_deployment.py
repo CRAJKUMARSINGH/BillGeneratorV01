@@ -5,7 +5,7 @@ Verification script for the deployable Bill Generator application
 
 import sys
 import os
-import importlib.util
+import importlib
 from pathlib import Path
 
 def check_file_exists(filepath, description):
@@ -18,17 +18,14 @@ def check_file_exists(filepath, description):
         return False
 
 def check_import(module_name, description):
-    """Try to import a module and print status"""
+    """Try to import a module and print status safely using importlib.import_module"""
     try:
-        spec = importlib.util.find_spec(module_name)
-        if spec is not None and spec.loader is not None:
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            print(f"✅ {description} - IMPORT SUCCESS")
-            return True
-        else:
-            print(f"❌ {description} - NOT FOUND")
-            return False
+        importlib.import_module(module_name)
+        print(f"✅ {description} - IMPORT SUCCESS")
+        return True
+    except ModuleNotFoundError:
+        print(f"❌ {description} - NOT FOUND")
+        return False
     except Exception as e:
         print(f"❌ {description} - IMPORT FAILED: {str(e)}")
         return False
