@@ -393,7 +393,7 @@ class TemplateRenderer:
             # Prepare data in the format expected by the extra items template
             template_data = {
                 'data': {
-                    'item_list': items
+                    'items': items
                 }
             }
             
