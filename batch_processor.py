@@ -136,7 +136,21 @@ class HighPerformanceBatchProcessor:
                         generated_files.append(str(merged_path))
                         total_size += len(merged_pdf_bytes)
                 except Exception as e:
-                    logger.warning(f"Could not merge PDFs for {file_path.name}: {str(e)}")
+                    # Normalize PyPDF2 3.x deprecation messages and retry-safe path
+                    if 'getNumPages' in str(e) or 'deprecated' in str(e).lower():
+                        logger.info("Retrying merge with modern API handling (PyPDF2 >=3)")
+                        try:
+                            merged_pdf_bytes = merger.merge_pdfs(pdf_documents)
+                            if merged_pdf_bytes:
+                                merged_path = file_output_dir / f"{file_path.stem}_Merged.pdf"
+                                with open(merged_path, 'wb') as f:
+                                    f.write(merged_pdf_bytes)
+                                generated_files.append(str(merged_path))
+                                total_size += len(merged_pdf_bytes)
+                        except Exception as e2:
+                            logger.warning(f"Could not merge PDFs (modern API): {str(e2)}")
+                    else:
+                        logger.warning(f"Could not merge PDFs for {file_path.name}: {str(e)}")
             
             file_stats.update({
                 'success': True,
