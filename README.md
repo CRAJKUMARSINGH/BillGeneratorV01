@@ -14,9 +14,9 @@ A comprehensive Streamlit application for generating professional infrastructure
 ### Streamlit Cloud Deployment
 
 1. Fork this repository
-2. In Streamlit Cloud, set the main file to `deployable_app.py`
+2. In Streamlit Cloud, set the main file to `app.py`
 3. Use Python version from `runtime.txt` (3.11.9)
-4. Dependencies are in `requirements.txt` (minimal, Cloud-friendly)
+4. Dependencies are in `requirements.txt` (single consolidated file)
 5. Optional: set `ENABLE_PLAYWRIGHT_PDF=1` if your workspace supports Playwright and its browsers; otherwise PDFs will be generated via pure-Python engines
 6. Deploy
 
@@ -25,7 +25,7 @@ A comprehensive Streamlit application for generating professional infrastructure
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-streamlit run deployable_app.py
+streamlit run app.py
 ```
 
 To run the full feature app with online entry mode UI:
@@ -53,10 +53,8 @@ streamlit run app.py
 
 ## File Structure
 
-- `deployable_app.py`: Main Streamlit application for deployment
-- `app.py`: Full-featured application with all modes
-- `requirements-deploy.txt`: Minimal dependencies for cloud deployment
-- `requirements.txt`: Full dependencies for local development
+- `app.py`: Streamlit application entrypoint
+- `requirements.txt`: Consolidated dependencies for deployment and local development
 
 ## License
 

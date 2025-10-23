@@ -38,8 +38,8 @@ def main():
     # Check core files
     print("\n📁 Checking core files...")
     files_check = [
-        ("deployable_app.py", "Deployable Streamlit App"),
-        ("requirements-deploy.txt", "Deployment Requirements"),
+        ("app.py", "Streamlit App Entry"),
+        ("requirements.txt", "Python Requirements"),
         ("enhanced_document_generator_fixed.py", "Enhanced Document Generator"),
         ("Procfile", "Procfile for Streamlit Cloud"),
     ]
@@ -114,8 +114,8 @@ def main():
         print("\n🎉 ALL CHECKS PASSED!")
         print("The deployable Bill Generator is ready for deployment.")
         print("\nTo deploy:")
-        print("1. Install dependencies: pip install -r requirements-deploy.txt")
-        print("2. Run the app: streamlit run deployable_app.py")
+        print("1. Install dependencies: pip install -r requirements.txt")
+        print("2. Run the app: streamlit run app.py")
         return True
     else:
         print("\n❌ SOME CHECKS FAILED!")

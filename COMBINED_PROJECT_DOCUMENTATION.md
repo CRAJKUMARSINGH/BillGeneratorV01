@@ -32,20 +32,20 @@ A comprehensive Streamlit application for generating professional infrastructure
 
 1. Fork this repository
 2. Connect to Streamlit Cloud
-3. Select `deployable_app.py` as the main file
+3. Select `app.py` as the main file
 4. Deploy!
 
 ### Local Deployment
 
 ```bash
-pip install -r requirements-deploy.txt
-streamlit run deployable_app.py
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
 ## Requirements
 
 - Python 3.11+
-- See `requirements-deploy.txt` for dependencies
+- See `requirements.txt` for dependencies
 
 ## Usage
 
@@ -56,10 +56,8 @@ streamlit run deployable_app.py
 
 ## File Structure
 
-- `deployable_app.py`: Main Streamlit application for deployment
-- `app.py`: Full-featured application with all modes
-- `requirements-deploy.txt`: Minimal dependencies for cloud deployment
-- `requirements.txt`: Full dependencies for local development
+- `app.py`: Streamlit application entrypoint
+- `requirements.txt`: Consolidated dependencies for deployment and development
 
 ## Enhanced Features
 
